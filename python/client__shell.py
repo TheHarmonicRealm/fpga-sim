@@ -51,6 +51,8 @@ from shared__util import (
     serialize_dataclass,
 )
 
+use_podman = True
+
 
 def error_title():
     return f"{Fore.RED}{Style.BRIGHT}Error:{Style.RESET_ALL}"
@@ -217,23 +219,36 @@ def main_command_completer():
 
 
 def get_server_image_tag():
-    proc = subprocess.run('docker image ls fpga-sim-server --format "{{.Tag}}"', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+    if not use_podman:
+        proc = subprocess.run('docker image ls fpga-sim-server --format "{{.Tag}}"', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+    else:
+        proc = subprocess.run('podman images --filter reference=localhost/fpga-sim-server --format "{{.Tag}}"', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+
     match proc.returncode:
         case 0:
             tag = proc.stdout.decode().strip()
             if tag == "":
                 return None
             else:
-                return tag
+                if not use_podman:
+                    return tag
+                else:
+                    return tag.splitlines()[0] # Podman will list both the alias and the original unlike Docker
         case _:
-            raise RuntimeError(f"docker image ls command failed; make sure that Docker Desktop is installed and is open.")
-    
+            if not use_podman:
+                raise RuntimeError(f"docker image ls command failed; make sure that Docker Desktop is installed and is open.")
+            else:
+                raise RuntimeError(f"podman image ls command failed; make sure that Podman is installed and is open.")
+
 def get_latest_container_port(tag: str):
     '''Gets the port of the latest-started Docker server container.
     Error if there are no containers open or if Docker seems to be unopened.'''
     # Command prints string with 0 or more lines of this if successful:
     #   '{container hex id}|0.0.0.0:{port}->9834/tcp, [::]:{port}->9834/tcp'
-    proc = subprocess.run(f'docker ps --format "{r"{{.ID}}|{{.Ports}}"}" --filter "ancestor=fpga-sim-server:{tag}"', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+    if not use_podman:
+        proc = subprocess.run(f'docker ps --format "{r"{{.ID}}|{{.Ports}}"}" --filter "ancestor=fpga-sim-server:{tag}"', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+    else:
+        proc = subprocess.run(f'podman ps --format "{r"{{.ID}}|{{.Ports}}"}" --filter "ancestor=fpga-sim-server:{tag}"', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     match proc.returncode:
         case 0:
             output = proc.stdout.decode()
@@ -245,7 +260,10 @@ def get_latest_container_port(tag: str):
             else:
                 raise RuntimeError(f"No container for the server was found running. This means the program failed, not you. Perhaps Docker crashed between starting the program and now?")
         case _:
-            raise RuntimeError(f"docker ps command failed; make sure that Docker Desktop is installed and is open.")
+            if not use_podman:
+                raise RuntimeError(f"docker ps command failed; make sure that Docker Desktop is installed and is open.")
+            else:
+                raise RuntimeError(f"podman ps command failed; make sure that Docker Desktop is installed and is open.")
 
 def colorize(err: str, folder: str | None = None):
     err = err.lstrip()
@@ -431,9 +449,15 @@ if __name__ == "__main__":
         # Launch docker:
         #   preexec_fn is part of ignoring ctrl-C
         if sys.platform != 'win32':
-            process = subprocess.Popen(f"docker run --rm -p 0:9834 fpga-sim-server:{required_tag}", text=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True, preexec_fn=os.setpgrp)
+            if not use_podman:
+                process = subprocess.Popen(f"docker run --rm -p 0:9834 fpga-sim-server:{required_tag}", text=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True, preexec_fn=os.setpgrp)
+            else:
+                process = subprocess.Popen(f"podman run --rm -p :9834 localhost/fpga-sim-server:{required_tag}", text=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True, preexec_fn=os.setpgrp)
         else: # setpgrp unavailable on Windows. TODO: figure out equivalent code to ignore on Windows
-            process = subprocess.Popen("docker run --rm -p 0:9834 fpga-sim-server:v1", text=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+            if not use_podman:
+                process = subprocess.Popen("docker run --rm -p 0:9834 fpga-sim-server:v1", text=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+            else:
+                process = subprocess.Popen("podman run --rm -p :9834 localhost/fpga-sim-server:v1", text=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
         # wait until first print-out
         out_pipe: IO[str] = process.stdout # pyright: ignore[reportAssignmentType]
         out_pipe.readline()
