@@ -59,10 +59,13 @@ class MainWindow(EmptyWindow):
 
         self.paused = False
 
-        self.pause_play_button = QPushButton("Pause")
+        self.pause_play_button = QPushButton("Pause [P]")
         self.pause_play_button.pressed.connect(self.pause_play)
 
-        self.main_layout.addWidget(self.pause_play_button)
+        self.reset_inputs_button = QPushButton("Reset inputs [R]")
+        self.reset_inputs_button.released.connect(self.reset_inputs)
+
+        self.main_layout.addLayout(hbox_factory(self.pause_play_button, self.reset_inputs_button))
 
 
         self.switches_line.state_changed.connect(lambda x: self.update_input_state(switches=x))
@@ -97,6 +100,13 @@ class MainWindow(EmptyWindow):
         self.pause_play_action.triggered.connect(self.pause_play_button.click)
         self.addAction(self.pause_play_action)
 
+        # Reset inputs with R
+        self.reset_inputs_action = QAction("Reset inputs", self)
+        self.reset_inputs_action.setShortcut(QKeySequence("R"))
+        self.reset_inputs_action.setAutoRepeat(False)
+        self.reset_inputs_action.triggered.connect(self.reset_inputs_button.click)
+        self.addAction(self.reset_inputs_action)
+
         self.ctrl_w_quit = QAction("Quit simulation", self)
         self.ctrl_w_quit.setShortcut(QKeySequence("Ctrl+W"))
         self.ctrl_w_quit.setAutoRepeat(False)
@@ -106,7 +116,13 @@ class MainWindow(EmptyWindow):
         t = threading.Thread(target=lambda: listen(self), daemon=True)
         t.start()
 
-        QTimer.singleShot(0, lambda: self.setFixedSize(self.minimumSizeHint()))        
+        QTimer.singleShot(0, lambda: self.setFixedSize(self.minimumSizeHint()))
+    
+    def reset_inputs(self):
+        for button in self.plus_buttons.buttons_list:
+            button.setChecked(False)
+        for switch in self.switches_line.checkboxes:
+            switch.setChecked(False)
 
     def set_frameless(self, enable: bool):
         self.setWindowFlag(Qt.WindowType.FramelessWindowHint, enable)
