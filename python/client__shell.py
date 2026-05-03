@@ -261,6 +261,8 @@ def colorize(err: str, folder: str | None = None):
     err = re.sub(r"^.*Makefile.*$", "", err, flags=re.MULTILINE)
     # remove lines that tell you to use a command e.g. ': ... Suggest see manual; fix the duplicates, or use --top-module to select top.'
     err = re.sub(r"( {8} *:.*use --(\w*)+(-\w*)* to.*\n)*", "", err, flags=re.MULTILINE)
+    # remove lines suggesting always_latch. PLEASE DO NOT USE LATCHES, KIDS!
+    err = re.sub(r"^.*always_latch.*$", "", err, flags=re.MULTILINE)
     # remove Verilator manual line, Verilator specifics not likely relevant
     err = re.sub(r"^.*the manual at.*$\n", "", err, flags=re.MULTILINE)
     # color the individual error/warning lines and replace % with a space
