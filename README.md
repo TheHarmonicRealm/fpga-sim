@@ -22,6 +22,10 @@ I recommend running the program on Mac or Linux over Windows if you
 have a choice; Windows is the most likely of the three to have tedious
 installation issues.
 
+This software was first used from March to May 2026 for ECE 2029,
+Introduction to Digital Circuit Design, at Worcester Polytechnic Institute (WPI)
+in Worcester, Massachusetts, for a class of about 120 students.
+
 ## System requirements
 
 Updated March 21, 2026, based on [Qt's requirements](https://doc.qt.io/qt-6/supported-platforms.html)
