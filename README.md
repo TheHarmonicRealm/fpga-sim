@@ -412,3 +412,45 @@ Using this mode:
 
 ---
 †No warranty given by developer, etc.
+
+## MacOS iCloud issue
+
+<!-- todo: put this in a better spot. just throwing this in here for now to
+make sure I remember it is something to address! -->
+
+A common issue on MacOS comes from installing the software in a folder synced
+to iCloud. This will, eventually, lead to an error like this when trying to
+start the live simulator:
+
+> [qt.qpa.plugin] Could not find the Qt platform plugin "cocoa" in ""
+> 
+> This application failed to start because no Qt platform plugin could be initialized. Reinstall application may fix this problem.
+
+To solve this you must delete the folder in fpga-sim called `.venv` and then
+move the entire fpga-sim folder somewhere on your device that is not synced to
+iCloud. How to do this:
+
+1. In the terminal, in the fpga-sim folder, run this command to delete the .venv folder:
+
+```
+rm -r ./.venv
+```
+
+2. Now run this command to open the parent (`..` is a universal alias for
+"parent of the current folder") of the fpga-sim folder in Finder:
+
+```
+open ..
+```
+
+3. Open a new tab with command+T. Press command+shift+G to open the "Go" menu 
+and type in ~, then hit enter, to jump to your user folder, which is not synced.
+
+4. Switch back to the first tab and drag fpga-sim into the second tab.
+
+5. Close the old fpga-sim VSCode window, then drag fpga-sim from Finder onto
+the VSCode icon in the Dock to open it in VSCode.
+
+6. When you next run the program it will recreate the virtual environment.
+Things should now work as before without breaking again.
+
