@@ -77,11 +77,8 @@ WORKDIR /root/fpga-sim
 RUN mkdir user_inputs
 
 COPY python/gui__states.py python/shared__util.py .
-COPY server_materials/Makefile .
-COPY server_materials/Makefile_obj .
-COPY server_materials/simulator_driver.cpp .
-COPY server_materials/Waveform_Run.sh .
 COPY python/server__manager.py .
+COPY --exclude=Vtop.h server_materials .
 
 EXPOSE 9834
 
