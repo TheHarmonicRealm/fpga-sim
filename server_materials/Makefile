@@ -47,7 +47,7 @@ VERILATOR_FLAGS += --build
 VERILATOR_FLAGS += -I./user_inputs
 
 # Input files for Verilator
-VERILATOR_INPUT = $(COMPILE_FILES) simulator_driver.cpp
+VERILATOR_INPUT = $(COMPILE_FILES) string_dict_tools.cpp port_ref.cpp simulator_driver.cpp
 
 ######################################################################
 default: build

@@ -20,6 +20,9 @@
 // Include model header, generated from Verilating "top.v"
 #include "Vtop.h"
 
+#include "string_dict_tools.h"
+#include "port_ref.h"
+
 // Legacy function required only so linking works on Cygwin and MSVC++
 // TODO: remove if I decide to only support running in Linux container [pretty likely]
 double sc_time_stamp() { return 0; }
@@ -80,140 +83,22 @@ class OutputItem {
         }
 };
 
-std::vector<std::string> split_string(const std::string& input_string, const char* separator) {
-    std::vector<std::string> result = {};
-    std::string segment = input_string;
-
-    while(true) {
-        auto next_sep = segment.find(*separator);
-        if(next_sep != std::string::npos) { // At least one segment left
-            result.push_back(segment.substr(0, next_sep));
-            if(next_sep + 1 < segment.length()) { // There is stuff after segment, so continue loop
-                segment = segment.substr(next_sep + 1);
-            }
-            else { // this was the last segment, followed by a separator with nothing after it
-                break;
-            }
-        }
-        else { // No more separators. Just put rest of string in last spot
-            result.push_back(segment);
-            break;
-        }
-    }
-
-    return result;
-}
-
-
-std::pair<std::string, std::string> split_at_comma(const std::string& input) {
-    auto comma_index = input.find(",");
-    return std::pair<std::string, std::string>(input.substr(0, comma_index), input.substr(comma_index + 1));
-}
-
-
-std::unordered_map<std::string, int> py_string_to_map(const std::string& input) {
-    // Converts a Python str() representation of a string:string dict to a map
-    // Example input: "{'key_1': 14, 'key_2': 2}"
-
-    std::unordered_map<std::string, int> output = {};
-
-    // Get rid of the outer curly brackets: "'key_1': 14, 'key_2': 2}"
-    auto trimmed_input = input.substr(1, input.length() - 2);
-
-    // Vector of {"'key1': 14", " 'key_2': 2"} 
-                              // ^ Note leading spaces after index 0
-    auto keyval_strings = split_string(trimmed_input, ",");
-
-    size_t index = 0;
-
-    for(std::string keyval : keyval_strings) {
-        if(index > 0) {
-            keyval = keyval.substr(1); // Trim leading space
-        }
-
-        // Vector of {"'key1'", " 14"}
-        std::vector<std::string> split = split_string(keyval, ":");
-
-        std::string key = split[0];
-        key = key.substr(1, key.length() - 2); // chop off single quotes
-        int val = stoi(split[1]); // stoi discards whitespace automatically
-
-        output[key] = val;
-
-        index ++;
-    }
-
-    return output;
-}
-
-// From an input string updates the relevant component
-void update_input(const std::string& input_string, Vtop* top) {
-    auto [name, state_str] = split_at_comma(input_string);
-    int state = stoi(state_str, nullptr, 2); // bitstring to int
-
-    if(name == "UB") {
-        top->UB = state;
-    }
-    else if(name == "DB") {
-        top->DB = state;
-    }
-    else if(name == "LB") {
-        top->LB = state;
-    }
-    else if(name == "RB") {
-        top->RB = state;
-    }
-    else if(name == "CB") {
-        top->CB = state;
-    }
-    else if(name == "switches") {
-        top->switches = state;
-    }
-}
-
-
-void parse_and_update_input(const std::string& input_string, Vtop* top) {
-    auto update_dict = py_string_to_map(input_string);
-    auto parts = split_string(input_string, "|");
-
-    for(auto i : parts) {
-        //std::cout << i;
-        update_input(i, top);
-    }
-}
-
-void update_from_key_val(std::string key, int val, Vtop* top) {
-    if(key == "UB") {
-        top->UB = val;
-    }
-    else if(key == "DB") {
-        top->DB = val;
-    }
-    else if(key == "LB") {
-        top->LB = val;
-    }
-    else if(key == "RB") {
-        top->RB = val;
-    }
-    else if(key == "CB") {
-        top->CB = val;
-    }
-    else if(key == "Switches") {
-        top->switches = val;
-    }
-    else {
-        std::cout << "Bad key: " << key << " (Val is " << val << ")" << std::endl;
-    }
-}
-
-void update_inputs(const std::string& input_string, Vtop* top) {
+void update_inputs(const std::string& input_string, std::unordered_map<std::string, PortReference> ports_map) {
+    // Make dict of names to values for all things listed in input
     auto update_dict = py_string_to_map(input_string);
 
+    // Go through update_dict and use the ports map to go from names to
+    // references, updating all matching relevant input ports
     for(auto i : update_dict) {
         auto key = i.first;
         auto val = i.second;
 
-        update_from_key_val(key, val, top);
+        if(ports_map.find(key) != ports_map.end()) {
+            ports_map.at(key).set(val);
+        }
+        else {
+            std::cout << "Bad key: " << key << std::endl;
+        }
     }
 }
 
@@ -291,6 +176,7 @@ int main(int argc, char** argv) {
 
     std::string input;
 
+    // TODO: use PortReferences for outputs, too
     std::array<OutputItem, 4> outputs_array = {
         OutputItem ((unsigned int*) &(top->segment), "Segment", 7),
         OutputItem ((unsigned int*) &(top->dp), "DP", 1),
@@ -298,9 +184,22 @@ int main(int argc, char** argv) {
         OutputItem ((unsigned int*) &(top->lights), "Lights", 16)
     };
 
+    auto top_ref = top.get();
+    
+    // Map of names to input port references
+    std::unordered_map<std::string, PortReference> input_ports_map = {
+        {"UB", PortReference((void*) &(top_ref->UB), 1)},
+        {"DB", PortReference((void*) &(top_ref->DB), 1)},
+        {"LB", PortReference((void*) &(top_ref->LB), 1)},
+        {"RB", PortReference((void*) &(top_ref->RB), 1)},
+        {"CB", PortReference((void*) &(top_ref->CB), 1)},
+        {"Switches", PortReference((void*) &(top_ref->switches), 16)},
+    };
+
 
     while (1) {
         getline(std::cin, input);
+
         if(input.find("exit") != std::string::npos) {
             break;
         }
@@ -308,8 +207,7 @@ int main(int argc, char** argv) {
             // No new input sent
         }
         else {
-            update_inputs(input, top.get()); // .get() to access inner pointer
-            //std::cerr << "received " << input << std::endl;
+            update_inputs(input, input_ports_map);
         }
 
         top->clk = !(top->clk); // Flip clock
@@ -330,7 +228,6 @@ int main(int argc, char** argv) {
 
         if(need_to_send) {
             std::cout << "secretkey" << map_to_py_string(output_map) << std::endl; // flush necessary for Python subprocess pipe
-           // std::cerr << "sending " << map_to_py_string(output_map) << std::endl;
         }
         else {
            std::cout << "secretkey" << std::endl;
