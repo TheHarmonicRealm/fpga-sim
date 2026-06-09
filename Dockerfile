@@ -70,8 +70,13 @@ RUN make install
 # Download uv then Python
 RUN apt-get update && apt-get install -y --no-install-recommends curl
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+
+ENV PATH="/root/.local/bin:$PATH"
+
 # Updating path wasn't working so just use absolute one for the one uv call
-RUN /root/.local/bin/uv python install 3.14
+RUN uv python install 3.14
+
+
 
 WORKDIR /root/fpga-sim
 RUN mkdir user_inputs
@@ -89,4 +94,4 @@ ENV PYTHONUNBUFFERED=1
 # Used by server manager to know if it is in Docker or not
 ENV FPGA_DOCKER_SERVER="Yes this is the server"
 
-CMD ["/root/.local/bin/python3.14", "./server__manager.py"]
+CMD ["python3.14", "./server__manager.py"]
