@@ -57,15 +57,12 @@ void update_inputs(const std::string& input_string, std::unordered_map<std::stri
 
     // Go through update_dict and use the ports map to go from names to
     // references, updating all matching relevant input ports
-    for(auto i : update_dict) {
-        auto key = i.first;
-        auto val = i.second;
-
-        if(ports_map.find(key) != ports_map.end()) {
-            ports_map.at(key).set(val);
+    for(const auto& [port_name, new_value] : update_dict) {
+        if(ports_map.find(port_name) != ports_map.end()) {
+            ports_map.at(port_name).set(new_value);
         }
         else {
-            std::cout << "Bad key: " << key << std::endl;
+            std::cout << "Bad key: " << port_name << std::endl;
         }
     }
 }
