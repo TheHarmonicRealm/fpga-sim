@@ -46,6 +46,10 @@ VERILATOR_FLAGS += --build
 # Make it look in ./user_inputs
 VERILATOR_FLAGS += -I./user_inputs
 
+# Set stdlib to c++17, for <optional>
+# Ubuntu image's GCC doesn't need this, but Mac Clang uses c++14
+VERILATOR_FLAGS += -CFLAGS -std=c++17
+
 # Input files for Verilator
 VERILATOR_INPUT = $(COMPILE_FILES) string_dict_tools.cpp port_ref.cpp simulator_driver.cpp
 

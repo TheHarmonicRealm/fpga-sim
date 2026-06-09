@@ -50,38 +50,6 @@ double sc_time_stamp() { return 0; }
     If it returns a value, that means the output it wraps has changed,
     and the new state should be sent to client (i.e. printed to stdout)
 */
-class OutputItem {
-    private:
-        unsigned int* read_source;
-        int width;
-
-        unsigned int value;
-        int mask;
-    public:
-        std::string name;
-        // Returns boolean for if the state has changed, and an int of current state
-        std::pair<bool, int> poll() {
-            unsigned int new_value = *(this->read_source) & mask;
-            bool anything_new = (value != new_value);
-            value = new_value;
-            return std::pair<bool, int>(anything_new, value);
-        }
-
-        OutputItem(unsigned int* read_source, const std::string& name, int width) {
-            this->read_source = read_source;
-            this->width = width;
-            this->mask = 0;
-            
-            for(int i = 0; i < this->width; i++) {
-                this->mask <<= 1;
-            	this->mask |= 1;
-            }
-            
-            this->name = name;
-
-            this->value = 1300;
-        }
-};
 
 void update_inputs(const std::string& input_string, std::unordered_map<std::string, PortReference> ports_map) {
     // Make dict of names to values for all things listed in input
@@ -176,14 +144,6 @@ int main(int argc, char** argv) {
 
     std::string input;
 
-    // TODO: use PortReferences for outputs, too
-    std::array<OutputItem, 4> outputs_array = {
-        OutputItem ((unsigned int*) &(top->segment), "Segment", 7),
-        OutputItem ((unsigned int*) &(top->dp), "DP", 1),
-        OutputItem ((unsigned int*) &(top->anode), "Anode", 4),
-        OutputItem ((unsigned int*) &(top->lights), "Lights", 16)
-    };
-
     auto top_ref = top.get();
     
     // Map of names to input port references
@@ -194,6 +154,13 @@ int main(int argc, char** argv) {
         {"RB", PortReference((void*) &(top_ref->RB), 1)},
         {"CB", PortReference((void*) &(top_ref->CB), 1)},
         {"Switches", PortReference((void*) &(top_ref->switches), 16)},
+    };
+
+    std::unordered_map<std::string, PortReference> output_ports_map = {
+        {"Segment", PortReference((void*) &(top_ref->segment), 7)},
+        {"DP", PortReference((void*) &(top_ref->dp), 1)},
+        {"Anode", PortReference((void*) &(top_ref->anode), 4)},
+        {"Lights", PortReference((void*) &(top_ref->lights), 16)},
     };
 
 
@@ -219,14 +186,16 @@ int main(int argc, char** argv) {
 
         std::unordered_map<std::string, int> output_map = {};
 
-        for(auto &i : outputs_array) {
-            auto [anything_new, state] = i.poll();
-            need_to_send |= anything_new;
-            
-            output_map[i.name] = state;
+        for(auto i : output_ports_map) {
+            auto name = i.first;
+
+            if (auto val = i.second.poll()) {
+                output_map[name] = *val;
+                need_to_send = true;
+            }
         }
 
-        if(need_to_send) {
+        if(!output_map.empty()) {
             std::cout << "secretkey" << map_to_py_string(output_map) << std::endl; // flush necessary for Python subprocess pipe
         }
         else {
