@@ -153,6 +153,8 @@ int main(int argc, char** argv) {
         {"Switches", PortReference((void*) &(top_ref->switches), 16)},
     };
 
+    // Map of names to output port references
+
     std::unordered_map<std::string, PortReference> output_ports_map = {
         {"Segment", PortReference((void*) &(top_ref->segment), 7)},
         {"DP", PortReference((void*) &(top_ref->dp), 1)},
@@ -195,7 +197,7 @@ int main(int argc, char** argv) {
         if(!output_map.empty()) {
             std::cout << "secretkey" << map_to_py_string(output_map) << std::endl; // flush necessary for Python subprocess pipe
         }
-        else {
+        else { // still send ping to maintain FPS count
            std::cout << "secretkey" << std::endl;
         }
 
