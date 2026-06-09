@@ -122,6 +122,7 @@ def build_live_sim(input_files: list[NamedFile], folder_name: str):
                       " seem to match the required form."
                       " See verilog/live_sim/ex_live/top.v for a"
                       f" template/example!{Style.RESET_ALL}")
+                # TODO: update once more boards supported
             else:
                 print("Server returned error message:")
                 print(colorize(content, f"verilog/live_sim/{folder_name}"))

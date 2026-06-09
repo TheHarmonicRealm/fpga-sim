@@ -18,7 +18,7 @@
 #include <verilated.h>
 
 // Include model header, generated from Verilating "top.v"
-#include "Vtop.h"
+#include "./obj_dir/Vtop.h"
 
 #include "string_dict_tools.h"
 #include "port_ref.h"
@@ -145,21 +145,13 @@ int main(int argc, char** argv) {
     
     // Map of names to input port references
     std::unordered_map<std::string, PortReference> input_ports_map = {
-        {"UB", PortReference((void*) &(top_ref->UB), 1)},
-        {"DB", PortReference((void*) &(top_ref->DB), 1)},
-        {"LB", PortReference((void*) &(top_ref->LB), 1)},
-        {"RB", PortReference((void*) &(top_ref->RB), 1)},
-        {"CB", PortReference((void*) &(top_ref->CB), 1)},
-        {"Switches", PortReference((void*) &(top_ref->switches), 16)},
+$input_ports
     };
 
     // Map of names to output port references
 
     std::unordered_map<std::string, PortReference> output_ports_map = {
-        {"Segment", PortReference((void*) &(top_ref->segment), 7)},
-        {"DP", PortReference((void*) &(top_ref->dp), 1)},
-        {"Anode", PortReference((void*) &(top_ref->anode), 4)},
-        {"Lights", PortReference((void*) &(top_ref->lights), 16)},
+$output_ports
     };
 
 
