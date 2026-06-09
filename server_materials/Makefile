@@ -50,7 +50,6 @@ VERILATOR_FLAGS += -CFLAGS -std=c++17
 
 
 # Input files for Verilator
-# VERILATOR_INPUT = $(COMPILE_FILES) string_dict_tools.cpp port_ref.cpp simulator_driver_neo.cpp
 VERILATOR_INPUT = $(COMPILE_FILES)
 
 verilate_line := $(VERILATOR) $(VERILATOR_FLAGS) $(VERILATOR_INPUT)
