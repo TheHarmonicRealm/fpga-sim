@@ -128,17 +128,6 @@ int main(int argc, char** argv) {
     // "TOP" will be the hierarchical name of the module.
     const std::unique_ptr<Vtop> top{new Vtop{contextp.get(), "TOP"}};
 
-    // Initialize Vtop's input signals all to 0
-    top->clk = 0;
-
-    top->UB = 0;
-    top->DB = 0;
-    top->LB = 0;
-    top->RB = 0;
-    top->CB = 0;
-    
-    top->switches = 0;
-
     std::string input;
 
     auto top_ref = top.get();
@@ -147,6 +136,12 @@ int main(int argc, char** argv) {
     std::unordered_map<std::string, PortReference> input_ports_map = {
 $input_ports
     };
+
+
+    for(auto i : input_ports_map) {
+        // Initialize Vtop's input signals all to 0, including clk
+        i.second.set(0);
+    }
 
     // Map of names to output port references
 
