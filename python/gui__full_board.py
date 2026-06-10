@@ -58,7 +58,7 @@ class MainWindow(EmptyWindow):
 
         self.paused = False
 
-        self.pause_play_button = QPushButton("Pause [P]")
+        self.pause_play_button = QPushButton("Pause simulation [P]")
         self.pause_play_button.pressed.connect(self.pause_play)
 
         self.reset_inputs_button = QPushButton("Reset switches [R]")
