@@ -148,8 +148,15 @@ class MainWindow(EmptyWindow):
 
     @Slot(object)
     def set_output_state(self, new_output_state: msg_dict):
-        self.lights_line.set_output_state(new_output_state["lights"])
-        self.four_digits.set(new_output_state["segment"], new_output_state["DP"], new_output_state["anode"])
+        try:
+            self.lights_line.set_output_state(new_output_state["lights"])
+            self.four_digits.set(new_output_state["segment"], new_output_state["DP"], new_output_state["anode"])
+        except KeyError:
+            print("Error: your verilog code's inputs and/or outputs did not match the required Full Board Format")
+            print("Please refer to the template at ...")
+             # TODO: do this in a smarter way, matching sizes too,
+             # and find a way to also match port widths
+            QApplication.quit()
         self.output_state.update(new_output_state)
 
     def update_input_state(self, *, buttons: int | None = None, switches: int | None = None):
