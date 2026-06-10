@@ -468,6 +468,9 @@ class BoardComponents:
             layout_hook.addItem(QSpacerItem(10, 0, QSizePolicy.Policy.Expanding))
             self.setLayout(layout_hook)
 
+            for checkbox in self.checkboxes:
+                checkbox.toggled.connect(lambda: self.state_changed.emit(self.__get_input_state()))
+
         @Slot(int)
         def set_input_state(self, new_state: int):
             # Block the 16 auto-emits and do a manual emit with new state
@@ -475,6 +478,7 @@ class BoardComponents:
             for checkbox, state in zip(self.checkboxes, int_to_bool_list(new_state, 16, invert=False)):
                 checkbox.setChecked(state)
             self.state_changed.emit(self.__get_input_state())
+            self.blockSignals(False)
 
         def __get_input_state(self) -> int:
             return bool_list_to_int([checkbox.isChecked() for checkbox in self.checkboxes])
