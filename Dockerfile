@@ -81,8 +81,7 @@ RUN uv python install 3.14
 WORKDIR /root/fpga-sim
 RUN mkdir user_inputs
 
-COPY python/gui__states.py python/shared__util.py .
-COPY python/server__manager.py .
+COPY python/server__manager.py python/shared__util.py .
 COPY --exclude=Vtop.h server_materials .
 
 EXPOSE 9834
