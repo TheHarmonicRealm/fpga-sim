@@ -182,3 +182,14 @@ def receive_error_or_ack(sock: socket.socket):
                 raise ValueError(header)
         message = big_receive(sock).decode()
         return deserialize_dataclass(message, dc_type)
+    
+def bool_list_to_int(bl: list[bool]):
+    return sum(int(b) << i for i, b in enumerate(reversed(bl)))
+
+def int_to_bool_list(num: int, width: int, *, invert: bool = False):
+    partial_list = [bool(int(c)) for c in bin(num)[2:]]
+    false_prefix = [False] * (width - len(partial_list))
+    if not invert:
+        return false_prefix + partial_list
+    else:
+        return [not x for x in (false_prefix + partial_list)]

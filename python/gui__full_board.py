@@ -2,8 +2,8 @@
 Launched as subprocess from client__shell.py
 '''
 
+import ast
 import base64
-import dataclasses as dc
 import os
 import socket
 import sys
@@ -11,35 +11,34 @@ import threading
 import time
 from statistics import mean
 
-from gui__qt_util import (
+from gui__widgets import (
     BoardComponents,
     EmptyWindow,
     hbox_factory,
+    int_to_bool_list,
     make_app,
     vbox_factory,
 )
-from gui__states import InputState, OutputState, WholeInputState, WholeOutputState
 from PySide6.QtCore import QPoint, Qt, QTimer, Signal, Slot
 from PySide6.QtGui import QAction, QKeySequence
 from PySide6.QtWidgets import QApplication, QCheckBox, QLabel, QPushButton
-from shared__util import (
-    big_receive,
-    deserialize_dataclass,
-    send_message,
-    serialize_dataclass,
-)
+from shared__util import big_receive, send_message
 
+msg_dict = dict[str, int]
+
+def deserialize_dict(d: str) -> msg_dict:
+    return ast.literal_eval(d)
 
 class MainWindow(EmptyWindow):
-    input_changed = Signal(WholeInputState)
-    output_changed = Signal(WholeOutputState)
+    input_changed = Signal(object)
+    output_changed = Signal(object)
     close_signal = Signal()
     def __init__(self, sock: socket.socket):
         super().__init__("FPGA board view")
         self.sock = sock
 
-        self.output_state = WholeOutputState(lights=OutputState.Lights(), anode=OutputState.Anode(), cathode=OutputState.Cathode())
-        self.input_state = WholeInputState(buttons=InputState.Buttons(), switches=InputState.Switches())
+        self.output_state = {"lights": 0, "anode": 0b1111, "cathode": 0b111_111}
+        self.input_state = {"UB": 0, "DB": 0, "LB": 0, "RB": 0, "CB": 0, "switches": 0}
 
         self.plus_buttons = BoardComponents.Buttons(self.shift_pressed)
         self.four_digits = BoardComponents.FourDigits()
@@ -71,7 +70,7 @@ class MainWindow(EmptyWindow):
         self.switches_line.state_changed.connect(lambda x: self.update_input_state(switches=x))
         self.plus_buttons.state_changed.connect(lambda x: self.update_input_state(buttons=x))
 
-        self.latest: None | WholeInputState = None
+        self.latest: None | msg_dict = None
 
         self.should_quit = False
 
@@ -147,18 +146,18 @@ class MainWindow(EmptyWindow):
         self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, enable)
         self.show()
 
-    @Slot(WholeOutputState)
-    def set_output_state(self, new_output_state: WholeOutputState):
-        self.lights_line.set_output_state(new_output_state.lights)
-        self.four_digits.set_anodes(new_output_state.anode, refresh=False)
-        self.four_digits.set_cathodes(new_output_state.cathode, refresh=True)
-        self.output_state = dc.replace(new_output_state)
+    @Slot(object)
+    def set_output_state(self, new_output_state: msg_dict):
+        self.lights_line.set_output_state(new_output_state["lights"])
+        self.four_digits.set(new_output_state["segment"], new_output_state["DP"], new_output_state["anode"])
+        self.output_state.update(new_output_state)
 
-    def update_input_state(self, *, buttons: InputState.Buttons | None = None, switches: InputState.Switches | None = None):
+    def update_input_state(self, *, buttons: int | None = None, switches: int | None = None):
         if buttons is not None:
-            self.input_state.buttons = dc.replace(buttons)
+            for b, state in zip(["UB", "DB", "LB", "RB", "CB"], int_to_bool_list(buttons, 5)):
+                self.input_state[b] = int(state)
         if switches is not None:
-            self.input_state.switches = dc.replace(switches)
+            self.input_state["switches"] = switches
         self.input_changed.emit(self.input_state)
     
     def ready_quit(self):
@@ -166,19 +165,15 @@ class MainWindow(EmptyWindow):
 
     @Slot()
     def quit_program(self):
-        # print("Quitting")
-        # print("Fetching app instance")
+        # get app instance, then close window before quitting app
         app: QApplication = QApplication.instance() # pyright: ignore[reportAssignmentType]
-        # print("Closing window")
         self.close()
-        # print("Closing app")
         app.exit()
-        # print("Closed app")
 
     def update_server(self):
         if not self.paused:
             if self.latest is not None:
-                send_message(serialize_dataclass(self.latest), self.sock)
+                send_message(str(self.latest), self.sock)
                 self.latest = None
             else:
                 send_message("", self.sock)
@@ -195,7 +190,7 @@ class MainWindow(EmptyWindow):
             self.last_time = time.time()
 
 
-    def update_latest(self, new_latest: WholeInputState):
+    def update_latest(self, new_latest: msg_dict):
         self.latest = new_latest
 
     def pause_play(self):
@@ -217,8 +212,8 @@ def listen(window: MainWindow):
         if response == "exit":
             listener_done.set()
             break
-        else: 
-            output_state = deserialize_dataclass(response, WholeOutputState)
+        else: # hasn't given exit response: continue as normal for a frame or so
+            output_state = deserialize_dict(response)
             if not have_quit.is_set(): # make sure to not do Qt stuff if app has quit. (Not sure if necessary)
                 window.output_changed.emit(output_state)
 

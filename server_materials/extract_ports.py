@@ -7,7 +7,7 @@ def chop_sp(in_str: str, prefix: str, suffix: str):
     '''chops off a suffix and a prefix'''
     return in_str[in_str.find(prefix):in_str.find(suffix)]
 
-cpp_dict_entry = Template("{\"$name_str\", PortReference((void*) &(top_ref->$name), $width)}")
+cpp_dict_entry = Template("{\"$name\", PortReference((void*) &(top_ref->$name), $width)}")
 cpp_dict_wrapper = Template("std::unordered_map<std::string, PortReference> $name = {\n$entries_str\n};")
 
 def indent_text(in_str: str, depth: int=1):
@@ -20,9 +20,7 @@ def double_quoted(in_str: str):
 
 def format_cpp_dict_entry(name: str, width: int):
     return cpp_dict_entry.substitute(
-        # temporary for compatibility -- all signals in dicts have
-        # first letter capitalized or are all-caps, except clk is lowercase
-        name_str=name.capitalize() if len(name) > 3 else name, name=name, width=width
+        name=name, width=width
     )
 
 # Name -> width

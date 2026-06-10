@@ -1,10 +1,8 @@
-import dataclasses as dc
 from enum import Enum, auto
 from threading import Event
 from typing import Literal, overload, override
 
 import gui__constants as c
-from gui__states import InputState, OutputState
 from PySide6.QtCore import (
     Property,
     QPoint,
@@ -44,13 +42,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from shared__util import bool_list_to_int, int_to_bool_list
 
-def choose_number(number: int) -> OutputState.Cathode:
-    try:
-        number = number % 10 # Cut down to 1 digit
-        return getattr(c.NumberStates, f"number_{number}")
-    except NameError:
-        raise ValueError(f"Invalid number {number} passed to choose_number()")
 
 def set_color(button: QPushButton | QRadioButton, color: str | QColor):
     '''Sets the most relevant color of the given widget using palettes.
@@ -177,14 +170,14 @@ class AppStyle(QProxyStyle):
                 bg_rect = QRect(1, 1, c.Sizes.switch.width() - 2, c.Sizes.switch.height() - 2)
 
                 # move top box up or down and color depending on state
-                if option.state & QStyle.StateFlag.State_On: # state seems to be missing from type hints
+                if option.state & QStyle.StateFlag.State_On: # pyright: ignore[reportAttributeAccessIssue] # state seems to be missing from type hints
                     indicator_rect = QRect(3, 3, c.Sizes.switch.width() - 6, c.Sizes.switch.width() - 6)
                     front_brush = on_brush
                 else:
                     indicator_rect = QRect(3, 3 + c.Sizes.switch.height() - c.Sizes.switch.width(), c.Sizes.switch.width() - 6, c.Sizes.switch.width() - 6)
                     front_brush = off_brush
 
-                if option.state & QStyle.StateFlag.State_HasFocus:
+                if option.state & QStyle.StateFlag.State_HasFocus: # pyright: ignore[reportAttributeAccessIssue]
                     painter.setPen(QPen(focus))
 
                 painter.setBrush(back_brush)
@@ -196,7 +189,7 @@ class AppStyle(QProxyStyle):
                 super().drawPrimitive(element, option, painter, widget)
     
     @override
-    def drawControl(self, element: QStyle.ControlElement, option: QStyleOption, painter: QPainter, /, widget: QWidget | None = ...) -> None:
+    def drawControl(self, element: QStyle.ControlElement, option: QStyleOption, painter: QPainter, /, widget: QWidget | None = ...) -> None: # pyright: ignore[reportArgumentType]
         match element:
             case QStyle.ControlElement.CE_PushButton if isinstance(widget, StickyButton):
                 pen = QPen()
@@ -215,7 +208,7 @@ class AppStyle(QProxyStyle):
 
                 # unlike natural Qt buttons, our buttons are down on click.
                 #   so draw using union of that and whether they are checked
-                is_pressed_in = widget.isDown() or (option.state & QStyle.StateFlag.State_On)
+                is_pressed_in = widget.isDown() or (option.state & QStyle.StateFlag.State_On) # pyright: ignore[reportAttributeAccessIssue]
 
                 if is_pressed_in:
                     brush_to_use = on_brush
@@ -223,7 +216,7 @@ class AppStyle(QProxyStyle):
                     brush_to_use = off_brush
 
                 # must draw focus indicator ourself — just make outline blue
-                if option.state & QStyle.StateFlag.State_HasFocus:
+                if option.state & QStyle.StateFlag.State_HasFocus: # pyright: ignore[reportAttributeAccessIssue]
                     if QGuiApplication.styleHints().colorScheme() == Qt.ColorScheme.Light:
                         pen.setColor(c.Colors.Button.Light.focus)
                     else: # brighter color for dark mode
@@ -374,7 +367,7 @@ class LightDisplay(QPushButton):
                 self.off_animation.start()
 
     @Property(QColor)
-    def bg_color(self):
+    def bg_color(self): # pyright: ignore[reportRedeclaration]
         return self._bg_color
     
     @bg_color.setter
@@ -391,20 +384,29 @@ class LightDisplay(QPushButton):
 #  E    C
 #   DDDD
 
+# Nothing implementation-specific until here
+
+    
+def make_light(*, horiz: bool, seg_type: SegmentType):
+    return LightDisplay(size=c.Sizes.horz_light if horiz else c.Sizes.vert_light, on_color=c.Colors.Segment.on, off_color=c.Colors.Segment.off, fade_delay_time=c.segment_fade_delay_time, off_time=c.segment_off_time, fade_on=False, segment_type=seg_type)
+
+def make_dp():
+    return LightDisplay(size=c.Sizes.dp, on_color=c.Colors.Segment.on, off_color=c.Colors.Segment.off, fade_delay_time=c.segment_fade_delay_time, off_time=c.segment_off_time, fade_on=False, segment_type=SegmentType.DP)
+
 class SevenSegmentLight:
     def __init__(self):
         super().__init__()
         self.layout = QGridLayout()
 
-        self.CA = LightDisplay(size=c.Sizes.horz_light, on_color=c.Colors.Segment.on, off_color=c.Colors.Segment.off, fade_delay_time=c.segment_fade_delay_time, off_time=c.segment_off_time, fade_on=False, segment_type=SegmentType.TOP)
-        self.CB = LightDisplay(size=c.Sizes.vert_light, on_color=c.Colors.Segment.on, off_color=c.Colors.Segment.off, fade_delay_time=c.segment_fade_delay_time, off_time=c.segment_off_time, fade_on=False, segment_type=SegmentType.TOP_RIGHT)
-        self.CC = LightDisplay(size=c.Sizes.vert_light, on_color=c.Colors.Segment.on, off_color=c.Colors.Segment.off, fade_delay_time=c.segment_fade_delay_time, off_time=c.segment_off_time, fade_on=False, segment_type=SegmentType.BOTTOM_RIGHT)
-        self.CD = LightDisplay(size=c.Sizes.horz_light, on_color=c.Colors.Segment.on, off_color=c.Colors.Segment.off, fade_delay_time=c.segment_fade_delay_time, off_time=c.segment_off_time, fade_on=False, segment_type=SegmentType.BOTTOM)
-        self.CE = LightDisplay(size=c.Sizes.vert_light, on_color=c.Colors.Segment.on, off_color=c.Colors.Segment.off, fade_delay_time=c.segment_fade_delay_time, off_time=c.segment_off_time, fade_on=False, segment_type=SegmentType.BOTTOM_LEFT)
-        self.CF = LightDisplay(size=c.Sizes.vert_light, on_color=c.Colors.Segment.on, off_color=c.Colors.Segment.off, fade_delay_time=c.segment_fade_delay_time, off_time=c.segment_off_time, fade_on=False, segment_type=SegmentType.TOP_LEFT)
-        self.CG = LightDisplay(size=c.Sizes.horz_light, on_color=c.Colors.Segment.on, off_color=c.Colors.Segment.off, fade_delay_time=c.segment_fade_delay_time, off_time=c.segment_off_time, fade_on=False, segment_type=SegmentType.MIDDLE)
+        self.CA = make_light(horiz=True, seg_type=SegmentType.TOP)
+        self.CB = make_light(horiz=False, seg_type=SegmentType.TOP_RIGHT)
+        self.CC = make_light(horiz=False, seg_type=SegmentType.BOTTOM_RIGHT)
+        self.CD = make_light(horiz=True, seg_type=SegmentType.BOTTOM)
+        self.CE = make_light(horiz=False, seg_type=SegmentType.BOTTOM_LEFT)
+        self.CF = make_light(horiz=False, seg_type=SegmentType.TOP_LEFT)
+        self.CG = make_light(horiz=True, seg_type=SegmentType.MIDDLE)
         # At tiny size, rounded square is close enough to a dot
-        self.DP = LightDisplay(size=c.Sizes.dp, on_color=c.Colors.Segment.on, off_color=c.Colors.Segment.off, fade_delay_time=c.segment_fade_delay_time, off_time=c.segment_off_time, fade_on=False, segment_type=SegmentType.DP)
+        self.DP = make_dp()
 
         self.layout.addWidget(self.CA, 0, 1) # horizontal bits
         self.layout.addWidget(self.CG, 2, 1)
@@ -419,23 +421,23 @@ class SevenSegmentLight:
 
         self.layout.setSpacing(0)
 
-        self.light_on = False
-        self.current_setting = dc.replace(c.NumberStates.all_off)
+        self.lights = [self.CA, self.CB, self.CC, self.CD, self.CE, self.CF, self.CG]
 
-    def set_lights(self, new_lights: OutputState.Cathode):
-        for target, setting in dc.asdict(new_lights).items():
-            light: LightDisplay = getattr(self, target)
-            light.set_light(setting)
-        self.current_setting = dc.replace(new_lights)
+    def set_lights(self, lights: int, dp: int, enable: bool):
+        if enable:
+            for seg, state in zip(self.lights, reversed(int_to_bool_list(lights, 7, invert=True))):
+                seg.set_light(state)
+            self.DP.set_light(not bool(dp))
+        else:
+            for light in self.lights:
+                light.set_light(False)
+            self.DP.set_light(False)
 
 class BoardComponents:
     class FourDigits(QWidget):
-        state_changed = Signal(OutputState.Anode, OutputState.Cathode)
         def __init__(self):
             super().__init__()
             self.digits = [SevenSegmentLight() for _ in range(4)]
-            self.current_anodes = OutputState.Anode()
-            self.current_pattern = dc.replace(c.NumberStates.all_off)
 
             self.layout_hook = hbox_factory(*[digit.layout for digit in self.digits], no_margins=True)
             self.setLayout(self.layout_hook)
@@ -450,28 +452,14 @@ class BoardComponents:
             self.setPalette(pal)
             self.setAutoFillBackground(True)
 
-        @Slot(OutputState.Anode)
-        def set_anodes(self, new_anodes: OutputState.Anode, *, refresh: bool): 
-            self.current_anodes = dc.replace(new_anodes)
-            if refresh:
-                self._refresh()
+        @Slot(int, int)
+        def set(self, cathode: int, dp: int, anode: int):
+            for digit, enable in zip(self.digits, int_to_bool_list(anode, 4, invert=True)):
+                digit.set_lights(cathode, dp, enable)
 
-        @Slot(OutputState.Cathode)
-        def set_cathodes(self, new_lights: OutputState.Cathode, *, refresh: bool): 
-            self.current_pattern = dc.replace(new_lights) # Inverted from active low on server side
-            if refresh:
-                self._refresh()
-
-        def _refresh(self):
-            for anode, digit in zip(dc.astuple(self.current_anodes), self.digits):
-                if anode: # Board is active low but inversion happens on server side
-                    digit.set_lights(self.current_pattern)
-                else:
-                    digit.set_lights(c.NumberStates.all_off)
-            self.state_changed.emit(self.current_anodes, self.current_pattern)
 
     class Switches(QWidget):
-        state_changed = Signal(InputState.Switches)
+        state_changed = Signal(int)
         def __init__(self):
             super().__init__()
             self.checkboxes = [SwitchCheckbox() for _ in range(0, 16)]
@@ -480,23 +468,18 @@ class BoardComponents:
             layout_hook.addItem(QSpacerItem(10, 0, QSizePolicy.Policy.Expanding))
             self.setLayout(layout_hook)
 
-            for checkbox in self.checkboxes:
-                checkbox.toggled.connect(lambda: self.state_changed.emit(self.__get_input_state()))
-
-        @Slot(InputState.Switches)
-        def set_input_state(self, new_state: InputState.Switches):
+        @Slot(int)
+        def set_input_state(self, new_state: int):
             # Block the 16 auto-emits and do a manual emit with new state
             self.blockSignals(True)
-            for state, checkbox in zip(dc.astuple(new_state), self.checkboxes):
+            for checkbox, state in zip(self.checkboxes, int_to_bool_list(new_state, 16, invert=False)):
                 checkbox.setChecked(state)
-            self.blockSignals(False)
             self.state_changed.emit(self.__get_input_state())
 
-        def __get_input_state(self) -> InputState.Switches:
-            return InputState.Switches(*[checkbox.isChecked() for checkbox in self.checkboxes])
+        def __get_input_state(self) -> int:
+            return bool_list_to_int([checkbox.isChecked() for checkbox in self.checkboxes])
 
     class Lights(QWidget):
-        state_changed = Signal(OutputState.Lights)
         def __init__(self):
             super().__init__()
             self.lights = [LightDisplay() for _ in range(0, 16)]
@@ -504,17 +487,12 @@ class BoardComponents:
             layout_hook.addItem(QSpacerItem(10, 0, QSizePolicy.Policy.Expanding))
             self.setLayout(layout_hook)
         
-        @Slot(OutputState.Lights)
-        def set_output_state(self, new_state: OutputState.Lights):
-            for state, light in zip(dc.astuple(new_state), self.lights):
+        def set_output_state(self, new_state: int):
+            for light, state in zip(self.lights, int_to_bool_list(new_state, 16, invert=False)):
                 light.set_light(state)
-            self.state_changed.emit(self.__get_output_state())
-        
-        def __get_output_state(self) -> OutputState.Lights:
-            return OutputState.Lights(*[light.light_on for light in self.lights])
 
     class Buttons(QWidget):
-        state_changed = Signal(InputState.Buttons)
+        state_changed = Signal(int)
         def __init__(self, shift_pressed: Event) -> None:
             super().__init__()
             layout_hook = QGridLayout()
@@ -529,16 +507,17 @@ class BoardComponents:
             self.buttons_list = [self.BTNU, self.BTND, self.BTNL, self.BTNR, self.BTNC]
 
             for button in self.buttons_list:
-                button.sticky_press.connect(lambda b=button: self.state_changed.emit(self.get_input_state(b)))
-                button.sticky_release.connect(lambda: self.state_changed.emit(self.get_input_state()))
+                button.sticky_press.connect(lambda b=button: self.state_changed.emit(self.__get_input_state(b)))
+                button.sticky_release.connect(lambda: self.state_changed.emit(self.__get_input_state()))
 
             layout_hook.addWidget(self.BTNU, 0, 1)
-            layout_hook.addWidget(self.BTNL, 1, 0)
-            layout_hook.addWidget(self.BTNC, 1, 1)
-            layout_hook.addWidget(self.BTNR, 1, 2)
             layout_hook.addWidget(self.BTND, 2, 1)
+            layout_hook.addWidget(self.BTNL, 1, 0)
+            layout_hook.addWidget(self.BTNR, 1, 2)
+            layout_hook.addWidget(self.BTNC, 1, 1)
             layout_hook.addItem(QSpacerItem(0, 0, QSizePolicy.Policy.Expanding), 0, 3)
 
-        def get_input_state(self, button: StickyButton | None = None) :
-            output_list = [b.isChecked() if b is not button else True for b in self.buttons_list]
-            return InputState.Buttons(*output_list)
+        def __get_input_state(self, new_button: StickyButton | None = None) :
+            # new_button is forced to true if provided; it is currently pressed but not checked
+            output_list = [b.isChecked() if b is not new_button else True for b in self.buttons_list]
+            return bool_list_to_int(output_list)
