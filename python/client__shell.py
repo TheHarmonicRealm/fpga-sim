@@ -574,6 +574,11 @@ if __name__ == "__main__":
         #   *good* but could be distracting
         sesh = PromptSession("> ", enable_history_search=True, complete_while_typing=False, completer=main_command_completer(), complete_style=CompleteStyle.READLINE_LIKE, history=InMemoryHistory())
 
+        # Name of last successfully compiled Verilog program is stored
+        # TODO: use this to warn users on running if the program seems to
+        # have been modified since last compilation
+        compiled_program: str | None = None
+
         while True:
             try:
                 command_string = sesh.prompt()
