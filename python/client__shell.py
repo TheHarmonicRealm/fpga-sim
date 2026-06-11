@@ -130,23 +130,24 @@ def build_live_sim(input_files: list[NamedFile], folder_name: str):
             print(f"{success_title()} Built live simulation in {round((t2 - t1), 3)}s. Run with start_live_sim.")
             compiled_program = folder_name
 
-def start_live_sim():
+def start_live_sim(simulator_name: str, simulator_filename: str):
     global app, compiled_program
 
     command = StartLiveCommand()
     send_command(command)
 
     result = receive_error_or_ack(sock)
+
     match result:
         case ErrorMessage(content): # known to be plain text hardcoded message
             print(f"{Fore.RED}{content}{Style.RESET_ALL}")
         case AckMessage():
-            print(f"Server started simulation of program {Fore.CYAN}{Style.BRIGHT}{compiled_program}{Style.RESET_ALL}. Launching GUI now.")
+            print(f"Server started simulation of program {Fore.CYAN}{Style.BRIGHT}./verilog/live_sim/{compiled_program}/top.v{Style.RESET_ALL}. Launching simulator \"{simulator_name}\" now.")
             # Run gui in a subprocess (fork) and give it the socket we already have
             if sys.platform != 'win32':
-                subprocess.run(f"uv run ./python/gui__full_board.py {sock.fileno()}", shell=True, close_fds=False)
+                subprocess.run(f"uv run ./python/{simulator_filename} {sock.fileno()}", shell=True, close_fds=False)
             else: # Windows requires fancy code; must use Popen because child must receive input after its creation
-                live_sim_process = subprocess.Popen("uv run ./python/gui__full_board.py", stdin=subprocess.PIPE, shell=True, close_fds=False)
+                live_sim_process = subprocess.Popen(f"uv run ./python/{simulator_filename}", stdin=subprocess.PIPE, shell=True, close_fds=False)
                 child_pipe: IO[bytes] = live_sim_process.stdin # pyright: ignore[reportAssignmentType]
                 shareable_socket = sock.share(live_sim_process.pid)
                 child_pipe.write(base64.b64encode(shareable_socket))
@@ -211,11 +212,12 @@ class BuildLiveSimCompleter(Completer):
             yield from FolderNameCompleter(live_sim_folder).get_completions(document, complete_event)
            
 def main_command_completer():
+    global simulators_map
     return NestedCompleter.from_nested_dict(
         {
             "waveform_sim": WaveformSimCompleter(),
             "build_live_sim": BuildLiveSimCompleter(),
-            "start_live_sim": None,
+            "start_live_sim": WordCompleter(list(simulators_map.keys())),
             "help": None,
             "exit": None
         }
@@ -568,6 +570,11 @@ if __name__ == "__main__":
         # apply keybindings. gets full functionality with small compromise!
         # sesh = PromptSession("> ", completer=main_command_completer(), key_bindings=kb, bottom_toolbar=toolbar)
 
+        simulators_map = {
+            "classic": "gui__full_board.py",
+            "one_number": "gui__switch_lights.py",
+        }
+
         # call this to have experience like old one on Mac/Linux.
         #   going with this to have the least disruption
         #   TODO: support the fancy one with a setting. I think it's
@@ -633,9 +640,10 @@ if __name__ == "__main__":
                             case _:
                                 raise ContinueException(f"{command} needs folder argument")
                     case "start_live_sim":
-                        if len(args) != 0:
-                            raise ContinueException(f"{command} takes no args")
-                        start_live_sim()
+                        if len(args) != 1 or args[0] not in simulators_map:
+                            raise ContinueException(f"{command} takes one argument: one of {list(simulators_map.keys())}")
+                        sim_key = args[0]
+                        start_live_sim(sim_key, simulators_map[sim_key])
                     case "exit" | "quit":
                         exit(0)
                     case "help" | "?" | "-h":

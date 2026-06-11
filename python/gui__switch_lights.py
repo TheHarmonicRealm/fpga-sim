@@ -15,6 +15,7 @@ from colorama import Fore, Style
 from gui__widgets import (
     BoardComponents,
     EmptyWindow,
+    SevenSegmentLight,
     hbox_factory,
     int_to_bool_list,
     make_app,
@@ -39,10 +40,9 @@ class MainWindow(EmptyWindow):
         self.sock = sock
 
         self.output_state = {"lights": 0, "anode": 0b1111, "segment": 0b111_111}
-        self.input_state = {"UB": 0, "DB": 0, "LB": 0, "RB": 0, "CB": 0, "switches": 0}
+        self.input_state = {"switches": 0}
 
-        self.plus_buttons = BoardComponents.Buttons(self.shift_pressed)
-        self.four_digits = BoardComponents.FourDigits()
+        self.number = SevenSegmentLight()
         self.lights_line = BoardComponents.Lights()
         self.switches_line = BoardComponents.Switches()
 
@@ -53,8 +53,9 @@ class MainWindow(EmptyWindow):
         self.on_top_checkbox.setChecked(True)
         self.on_top_checkbox.toggled.connect(self.set_on_top)
 
-        self.main_layout.addWidget(self.plus_buttons)
-        self.main_layout.addWidget(self.four_digits)
+        self.number.layout.setContentsMargins(10, 10, 10, 10)
+
+        self.main_layout.addLayout(hbox_factory(self.number.layout))
         self.main_layout.addLayout(vbox_factory(self.lights_line, self.switches_line))
 
         self.paused = False
@@ -67,9 +68,7 @@ class MainWindow(EmptyWindow):
 
         self.main_layout.addLayout(hbox_factory(self.pause_play_button, self.reset_inputs_button))
 
-
         self.switches_line.state_changed.connect(lambda x: self.update_input_state(switches=x))
-        self.plus_buttons.state_changed.connect(lambda x: self.update_input_state(buttons=x))
 
         self.latest: None | msg_dict = None
 
@@ -119,8 +118,6 @@ class MainWindow(EmptyWindow):
         QTimer.singleShot(0, lambda: self.setFixedSize(self.minimumSizeHint()))
     
     def reset_inputs(self):
-        for button in self.plus_buttons.buttons_list:
-            button.setChecked(False)
         for switch in self.switches_line.checkboxes:
             switch.setChecked(False)
 
@@ -151,22 +148,20 @@ class MainWindow(EmptyWindow):
     def set_output_state(self, new_output_state: msg_dict):
         try:
             self.lights_line.set_output_state(new_output_state["lights"])
-            self.four_digits.set(new_output_state["segment"], new_output_state["DP"], new_output_state["anode"])
+            self.number.set_lights(new_output_state["segment"], new_output_state["DP"], True)
         except KeyError:
-            print("Error: your verilog code's inputs and/or outputs did not match the required format for the \"classic\" board.")
+            print("Error: your verilog code's inputs and/or outputs did not match the required format for the \"one_number\" board.")
             print(f"Please refer to the template at {Fore.CYAN}{Style.BRIGHT}./templates/classic.v{Style.RESET_ALL} if this is the board you meant to use.")
              # TODO: do this in a smarter way, matching sizes too,
              # and find a way to also match port widths
             QApplication.quit()
         self.output_state.update(new_output_state)
 
-    def update_input_state(self, *, buttons: int | None = None, switches: int | None = None):
-        if buttons is not None:
-            for b, state in zip(["UB", "DB", "LB", "RB", "CB"], int_to_bool_list(buttons, 5)):
-                self.input_state[b] = int(state)
+    def update_input_state(self, *, switches: int | None = None):
         if switches is not None:
             self.input_state["switches"] = switches
         self.input_changed.emit(self.input_state)
+        print(self.input_state)
     
     def ready_quit(self):
         self.should_quit = True
