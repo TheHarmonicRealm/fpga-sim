@@ -9,8 +9,8 @@
     # docker buildx build --platform linux/amd64,linux/arm64 -t fpga-sim-server:v1 .
 
     #### Export images in ARM and x86 format after building
-    # docker image save --output fpga_sim_image_x86.tar fpga-sim-server --platform linux/amd64
-    # docker image save --output fpga_sim_image_ARM.tar fpga-sim-server --platform linux/arm64
+    # docker image save --output fpga_sim_image_x86.tar fpga-sim-server:v2 --platform linux/amd64
+    # docker image save --output fpga_sim_image_ARM.tar fpga-sim-server:v2 --platform linux/arm64
     
     #### Load the output of last command onto user machine
     # docker load -i fpga_sim_image_x86.tar
