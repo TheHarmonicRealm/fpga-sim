@@ -107,7 +107,7 @@ def waveform_sim(input_files: list[NamedFile], output_path: Path, folder_name: s
                     print(result_start, f"Saved output to {Style.BRIGHT}{Fore.CYAN}{clickable_filepath(output_path, 2)}{Style.RESET_ALL}")
 
 def build_live_sim(input_files: list[NamedFile], folder_name: str):
-    global sock
+    global sock, compiled_program
 
     command = BuildLiveCommand(input_files)
     t1 = time.time()
@@ -128,9 +128,10 @@ def build_live_sim(input_files: list[NamedFile], folder_name: str):
                 print(colorize(content, f"verilog/live_sim/{folder_name}"))
         case AckMessage():
             print(f"{success_title()} Built live simulation in {round((t2 - t1), 3)}s. Run with start_live_sim.")
+            compiled_program = folder_name
 
 def start_live_sim():
-    global app
+    global app, compiled_program
 
     command = StartLiveCommand()
     send_command(command)
@@ -140,7 +141,7 @@ def start_live_sim():
         case ErrorMessage(content): # known to be plain text hardcoded message
             print(f"{Fore.RED}{content}{Style.RESET_ALL}")
         case AckMessage():
-            print("Server started simulation. Launching GUI now.")
+            print(f"Server started simulation of program {Fore.CYAN}{Style.BRIGHT}{compiled_program}{Style.RESET_ALL}. Launching GUI now.")
             # Run gui in a subprocess (fork) and give it the socket we already have
             if sys.platform != 'win32':
                 subprocess.run(f"uv run ./python/gui__full_board.py {sock.fileno()}", shell=True, close_fds=False)
