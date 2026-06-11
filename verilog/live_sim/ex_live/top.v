@@ -12,7 +12,7 @@ module top(
     /* verilator lint_on UNUSEDSIGNAL */
 
     output reg [6:0]         segment,
-    output reg               dp,
+    output reg               DP,
     output reg [3:0]         anode,	
     output reg [15:0]        lights);
 
@@ -35,7 +35,7 @@ always @(posedge clk) begin
         anode <= 4'b0000;
     end
     segment <= 7'b0_000_000;
-    dp <= 0;
+    DP <= 0;
 end
 
     
