@@ -152,12 +152,9 @@ $output_ports
 
     while (1) {
         getline(std::cin, input);
-
-        if(input.find("exit") != std::string::npos) {
-            break;
-        }
-        else if(input.empty()) {
-            // No new input sent
+        
+        if(input.empty()) {
+            // No new input sent, do nothing
         }
         else {
             update_inputs(input, input_ports_map);

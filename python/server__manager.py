@@ -53,6 +53,8 @@ def live_sim(sock: socket.socket):
                 print("Client requested live sim exit")
                 send_message("exit", conn)
                 print("Returning to main command loop")
+                # kill subprocess. Telling it to terminate then wait() doesn't seem to work?
+                process.kill()
                 break
             case "": # Give sim process empty line to indicate no new input
                 input_string = ""
