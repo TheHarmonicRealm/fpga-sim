@@ -222,15 +222,15 @@ def main_command_completer():
     )
 
 
-def get_server_image_tag():
+def get_server_image_tags():
     proc = subprocess.run('docker image ls fpga-sim-server --format "{{.Tag}}"', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     match proc.returncode:
         case 0:
-            tag = proc.stdout.decode().strip()
-            if tag == "":
+            tags = proc.stdout.decode().strip()
+            if tags == "":
                 return None
             else:
-                return tag
+                return tags.splitlines()
         case _:
             raise RuntimeError("docker image ls command failed.")
     
@@ -490,14 +490,14 @@ if __name__ == "__main__":
         required_tag = docker_tag_filepath.read_text().strip()
         
         try:
-            available_tag = get_server_image_tag()
+            available_tags = get_server_image_tags()
         except RuntimeError as e: # very unlikely. hard to have a reasonable hint here
             error_exit(f"Docker is open, but {e}", hint="Try running this program again. This is an unusual error.")
 
-        if available_tag is None:
-            error_exit(f"The necessary Docker image (fpga-sim-server:{required_tag}) is not installed", hint="Run docker pull as described in the README at", cmd="https://github.com/TheHarmonicRealm/fpga-sim")
-        elif available_tag != required_tag:
-            error_exit(f"fpga-sim-server:{available_tag} is loaded; software requires {required_tag}", hint="Run git pull and/or the docker pull command described in the README at", cmd="https://github.com/TheHarmonicRealm/fpga-sim")
+        if available_tags is None:
+            error_exit(f"The necessary Docker image (fpga-sim-server:{required_tag}) is not installed, under any version", hint="Run docker pull as described in the README at", cmd="https://github.com/TheHarmonicRealm/fpga-sim")
+        elif required_tag not in available_tags:
+            error_exit(f"Other versions (tags {available_tags}) are installed, but required fpga-sim-server:{required_tag} is not installed", hint="Run git pull and/or the docker pull command described in the README at", cmd="https://github.com/TheHarmonicRealm/fpga-sim")
         # Launch docker:
         #   preexec_fn is part of ignoring ctrl-C
         if sys.platform != 'win32':
