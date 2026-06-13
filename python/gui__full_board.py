@@ -33,6 +33,7 @@ def deserialize_dict(d: str) -> msg_dict:
 class MainWindow(EmptyWindow):
     input_changed = Signal(object)
     output_changed = Signal(object)
+    pinged = Signal()
     close_signal = Signal()
     def __init__(self, sock: socket.socket):
         super().__init__("FPGA board view")
@@ -113,6 +114,8 @@ class MainWindow(EmptyWindow):
         self.ctrl_w_quit.triggered.connect(QApplication.quit)
         self.addAction(self.ctrl_w_quit)
 
+        self.pinged.connect(self.update_fps)
+
         t = threading.Thread(target=lambda: listen(self), daemon=True)
         t.start()
 
@@ -178,6 +181,15 @@ class MainWindow(EmptyWindow):
         self.close()
         app.exit()
 
+    def update_fps(self):
+        new_time = time.time()
+        self.last_few_fps.append(1/(new_time - self.last_time))
+        if len(self.last_few_fps) == 10:
+            self.fps_counter.setText(f"<code>{mean(self.last_few_fps):.2f}/60</code> FPS")
+            self.last_few_fps.clear()
+        self.last_time = new_time
+
+
     def update_server(self):
         if not self.paused:
             if self.latest is not None:
@@ -185,17 +197,6 @@ class MainWindow(EmptyWindow):
                 self.latest = None
             else:
                 send_message("", self.sock)
-            new_time = time.time()
-
-            self.last_few_fps.append(1/(new_time - self.last_time))
-            if len(self.last_few_fps) == 10:
-                self.fps_counter.setText(f"<code>{mean(self.last_few_fps):.2f}/60</code> FPS")
-                self.last_few_fps.clear()
-            self.last_time = new_time
-        else:
-            self.fps_counter.setText(f"<em><code>&nbsp;PAUSED&nbsp;</code></em> FPS")
-            self.last_few_fps.clear() # While paused, times are meaningless
-            self.last_time = time.time()
 
 
     def update_latest(self, new_latest: msg_dict):
@@ -205,6 +206,9 @@ class MainWindow(EmptyWindow):
         self.paused = not self.paused
         if self.paused:
             self.pause_play_button.setText("Play")
+            self.fps_counter.setText(f"<em><code>&nbsp;PAUSED&nbsp;</code></em> FPS")
+            self.last_few_fps.clear() # While paused, times are meaningless
+            self.last_time = time.time()
         else:
             self.pause_play_button.setText("Pause")
 
@@ -215,6 +219,9 @@ def listen(window: MainWindow):
     sock = window.sock
     while True:
         response = big_receive(sock).decode()
+
+        # update FPS count
+        window.pinged.emit()
 
         # quitting app sends an exit signal then server replies with exit
         if response == "exit":
