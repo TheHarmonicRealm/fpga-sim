@@ -24,11 +24,8 @@ PortReference::PortReference(void* data, unsigned int width) {
     this->width = width;
     this->internal_pointer = data;
     this->mask = make_mask(width);
-    this->unread = true;
 }
 void PortReference::set(QData value) {
-    this->unread = true;
-
     if(this->width <= 8) { // CData
         // *(CData*) this->internal_pointer = value & this->mask;
         *(CData*) this->internal_pointer = value & this->mask;
@@ -47,29 +44,22 @@ void PortReference::set(QData value) {
     }
 }
 
-std::optional<QData> PortReference::poll() {
-    if(!this->unread) {
-        return {};
+QData PortReference::get() {
+    if(this->width <= 8) { // CData
+        return *(CData*) this->internal_pointer & this->mask;
+    }
+    else if(this->width <= 16) { // SData
+        return *(SData*) this->internal_pointer & this->mask;
+    }
+    else if(this->width <= 32) { // IData
+        return *(IData*) this->internal_pointer & this->mask;
+    }
+    else if(this->width <= 64) { // QData
+        return *(QData*) this->internal_pointer & this->mask;
     }
     else {
-        this->unread = false;
-
-        if(this->width <= 8) { // CData
-            return *(CData*) this->internal_pointer & this->mask;
-        }
-        else if(this->width <= 16) { // SData
-            return *(SData*) this->internal_pointer & this->mask;
-        }
-        else if(this->width <= 32) { // IData
-            return *(IData*) this->internal_pointer & this->mask;
-        }
-        else if(this->width <= 64) { // QData
-            return *(QData*) this->internal_pointer & this->mask;
-        }
-        else {
-            // (should be unreachable)
-            std::cout << "Width is too high: " << this->width << std::endl;
-            return {};
-        }
+        // (should be unreachable)
+        std::cout << "Width is too high: " << this->width << std::endl;
+        return {};
     }
 }

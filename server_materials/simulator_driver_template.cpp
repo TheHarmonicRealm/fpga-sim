@@ -165,25 +165,15 @@ $output_ports
         contextp->timeInc(1);  // Advance one time unit
         top->eval(); // and run one frame of the model
 
-        bool need_to_send = false;
-
         std::unordered_map<std::string, int> output_map = {};
 
         for(auto i : output_ports_map) {
             auto name = i.first;
 
-            if (auto val = i.second.poll()) {
-                output_map[name] = *val;
-                need_to_send = true;
-            }
+            output_map[name] = i.second.get();
         }
 
-        if(!output_map.empty()) {
-            std::cout << "secretkey" << map_to_py_string(output_map) << std::endl; // flush necessary for Python subprocess pipe
-        }
-        else { // still send ping to maintain FPS count
-           std::cout << "secretkey" << std::endl;
-        }
+        std::cout << "secretkey" << map_to_py_string(output_map) << std::endl; // flush necessary for Python subprocess pipe
 
     }
 

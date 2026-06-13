@@ -72,11 +72,7 @@ def live_sim(sock: socket.socket):
         is_system_string = output_string.startswith("secretkey")
         if is_system_string:
             output_string = output_string[len("secretkey"):]
-            if output_string == "":
-                continue
-            else:
-                output_dict: dict[str, int] = ast.literal_eval(output_string)
-                send_message(str(output_dict), conn)
+            send_message(output_string, conn)
         elif not i_am_a_docker: # TODO: get to user if in docker!
             print(output_string)
     # TODO: properly close process. Writing "exit\n" and calling process.wait() hangs forever...

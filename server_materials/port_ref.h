@@ -12,10 +12,9 @@ class PortReference {
     private:
         void* internal_pointer;
         QData mask;
-        bool unread;
     public:
         int width;
         PortReference(void* data, unsigned int width);
         void set(QData value);
-        std::optional<QData> poll();
+        QData get();
 };
