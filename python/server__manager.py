@@ -3,6 +3,7 @@ import dataclasses as dc
 import shutil
 import socket
 import subprocess
+import textwrap
 from os import environ
 from pathlib import Path
 from string import Template
@@ -24,6 +25,12 @@ from shared__util import (
     send_message,
     serialize_dataclass,
 )
+
+try:
+    from colorama import Fore, Style  # TODO: make it lazy import in the future
+    colorama_available = True
+except ModuleNotFoundError:
+    colorama_available = False
 
 msg_dict = dict[str, int]
 
@@ -68,18 +75,28 @@ def live_sim(sock: socket.socket):
         in_pipe.write(input_string + "\n")
         in_pipe.flush()
 
+        verilog_prints: list[str] = []
+        system_update_string: str = ""
+
         while True:
             # receive strings until we get a system string
             # we know system string is last because model eval is what triggers
             # display prints and is called before sending state
             output_string = out_pipe.readline().strip()
-            is_system_string = output_string.startswith("secretkey")
-            if is_system_string:
-                output_string = output_string[len("secretkey"):]
-                send_message(output_string, conn)
+            if output_string.startswith("secretkey"):
+                system_update_string = output_string[len("secretkey"):]
                 break
-            elif not i_am_a_docker: # TODO: get to user if in docker!
-                print(output_string)
+            else:
+                if not i_am_a_docker:
+                    m = textwrap.indent(output_string, " " * 4)
+                    if colorama_available:
+                        print(f"{Fore.BLUE}{m}{Style.RESET_ALL}")
+                    else:
+                        print(m)
+                verilog_prints.append(output_string)
+
+        send_message(repr(verilog_prints), sock)
+        send_message(system_update_string, sock)
     # TODO: properly close process. Writing "exit\n" and calling process.wait() hangs forever...
 
 def try_make(files: list[NamedFile]):

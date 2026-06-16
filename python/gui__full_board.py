@@ -7,6 +7,7 @@ import base64
 import os
 import socket
 import sys
+import textwrap
 import threading
 import time
 from statistics import mean
@@ -238,7 +239,14 @@ class ListenThread(QThread):
                 listener_done.set()
                 break
             else: # hasn't given exit response: continue as normal for a frame or so
-                output_state = deserialize_dict(response)
+                verilog_prints = ast.literal_eval(response)
+                if len(verilog_prints) > 0:
+                    message = "\n".join([textwrap.indent(s, " " * 4) for s in verilog_prints])
+                    print(f"{Fore.BLUE}{Style.BRIGHT}{message}{Style.RESET_ALL}")
+
+                
+                response_part_2 = big_receive(sock).decode()
+                output_state = deserialize_dict(response_part_2)
                 if not have_quit.is_set(): # make sure to not do Qt stuff if app has quit. (Not sure if necessary)
                     window.output_changed.emit(output_state)
 

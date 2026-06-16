@@ -144,6 +144,7 @@ def start_live_sim(simulator_name: str, simulator_filename: str):
         case AckMessage():
             print(f"Server started simulation of program {Fore.CYAN}{Style.BRIGHT}./verilog/live_sim/{compiled_program}/top.v{Style.RESET_ALL}. Launching simulator \"{simulator_name}\" now.")
             # Run gui in a subprocess (fork) and give it the socket we already have
+            print(f"Prints from the Verilog model will be indented and {Fore.BLUE}{Style.BRIGHT}blue{Style.RESET_ALL}!")
             if sys.platform != 'win32':
                 subprocess.run(f"uv run ./python/{simulator_filename} {sock.fileno()}", shell=True, close_fds=False)
             else: # Windows requires fancy code; must use Popen because child must receive input after its creation
