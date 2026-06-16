@@ -56,13 +56,13 @@ def live_sim(sock: socket.socket):
                 # kill subprocess. Telling it to terminate then wait() doesn't seem to work?
                 process.kill()
                 break
-            case "": # Give sim process empty line to indicate no new input
-                input_string = ""
+            case "": # Received empty: paused
+                continue
             case _: # Otherwise input must be dataclass string
                 try: # Try to convert; if it fails print error rather than crash
                     input_string = str(deserialize_dict(inp))
                 except ValueError as e:
-                    print(f"Failure with input {inp}: e")
+                    send_message(f"Failure with input {inp}: e", conn)
                     continue
 
         in_pipe.write(input_string + "\n")

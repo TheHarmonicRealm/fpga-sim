@@ -20,7 +20,7 @@ from gui__widgets import (
     make_app,
     vbox_factory,
 )
-from PySide6.QtCore import QPoint, Qt, QTimer, Signal, Slot
+from PySide6.QtCore import QDeadlineTimer, QPoint, Qt, QThread, QTimer, Signal, Slot
 from PySide6.QtGui import QAction, QKeySequence
 from PySide6.QtWidgets import QApplication, QCheckBox, QLabel, QPushButton
 from shared__util import big_receive, send_message
@@ -34,6 +34,7 @@ class MainWindow(EmptyWindow):
     input_changed = Signal(object)
     output_changed = Signal(object)
     pinged = Signal()
+    input_time = Signal()
     close_signal = Signal()
     def __init__(self, sock: socket.socket):
         super().__init__("FPGA board view")
@@ -72,7 +73,7 @@ class MainWindow(EmptyWindow):
         self.switches_line.state_changed.connect(lambda x: self.update_input_state(switches=x))
         self.plus_buttons.state_changed.connect(lambda x: self.update_input_state(buttons=x))
 
-        self.latest: None | msg_dict = None
+        self.latest: msg_dict = self.input_state.copy()
 
         self.should_quit = False
 
@@ -80,12 +81,8 @@ class MainWindow(EmptyWindow):
         self.output_changed.connect(self.set_output_state)
         self.close_signal.connect(self.quit_program)
 
-        self.update_timer = QTimer(interval=17)
-        self.update_timer.timeout.connect(self.update_server)
-        self.update_timer.start()
-
         self.last_few_fps: list[float] = []
-        self.last_time = time.time()
+        self.last_time = time.perf_counter()
         self.fps_counter = QLabel("__.__/60 FPS")
 
         if "WAYLAND_DISPLAY" not in os.environ:
@@ -115,9 +112,11 @@ class MainWindow(EmptyWindow):
         self.addAction(self.ctrl_w_quit)
 
         self.pinged.connect(self.update_fps)
+        self.input_time.connect(self.update_server)
 
-        t = threading.Thread(target=lambda: listen(self), daemon=True)
-        t.start()
+        # important: put thread under self or gc destroys it immediately
+        self.t = ListenThread(window=self)
+        self.t.start()
 
         QTimer.singleShot(0, lambda: self.setFixedSize(self.minimumSizeHint()))
     
@@ -182,7 +181,7 @@ class MainWindow(EmptyWindow):
         app.exit()
 
     def update_fps(self):
-        new_time = time.time()
+        new_time = time.perf_counter()
         self.last_few_fps.append(1/(new_time - self.last_time))
         if len(self.last_few_fps) == 10:
             self.fps_counter.setText(f"<code>{mean(self.last_few_fps):.2f}/60</code> FPS")
@@ -192,11 +191,9 @@ class MainWindow(EmptyWindow):
 
     def update_server(self):
         if not self.paused:
-            if self.latest is not None:
-                send_message(str(self.latest), self.sock)
-                self.latest = None
-            else:
-                send_message("", self.sock)
+            send_message(str(self.latest), self.sock)
+        else:
+            send_message("", self.sock)
 
 
     def update_latest(self, new_latest: msg_dict):
@@ -208,29 +205,46 @@ class MainWindow(EmptyWindow):
             self.pause_play_button.setText("Play")
             self.fps_counter.setText(f"<em><code>&nbsp;PAUSED&nbsp;</code></em> FPS")
             self.last_few_fps.clear() # While paused, times are meaningless
-            self.last_time = time.time()
         else:
             self.pause_play_button.setText("Pause")
+            self.last_few_fps.clear()
+            self.last_time = time.perf_counter()
+            self.input_time.emit()
 
 
-def listen(window: MainWindow):
-    global listener_done
-    global have_quit
-    sock = window.sock
-    while True:
-        response = big_receive(sock).decode()
+class ListenThread(QThread):
+    
+    def __init__(self, window: MainWindow) -> None:
+        super().__init__()
+        self.window = window
 
-        # update FPS count
-        window.pinged.emit()
+    def run(self):
+        global listener_done
+        global have_quit
+        window = self.window
+        sock = window.sock
 
-        # quitting app sends an exit signal then server replies with exit
-        if response == "exit":
-            listener_done.set()
-            break
-        else: # hasn't given exit response: continue as normal for a frame or so
-            output_state = deserialize_dict(response)
-            if not have_quit.is_set(): # make sure to not do Qt stuff if app has quit. (Not sure if necessary)
-                window.output_changed.emit(output_state)
+        # Timer with support for nanosecond precision
+        our_timer = QDeadlineTimer()
+
+        while True:
+            our_timer.setPreciseRemainingTime(0, nsecs=round(1_000_000_000/60))
+            window.pinged.emit()
+            window.input_time.emit()
+            response = big_receive(sock).decode()
+
+            # quitting app sends an exit signal then server replies with exit
+            if response == "exit":
+                listener_done.set()
+                break
+            else: # hasn't given exit response: continue as normal for a frame or so
+                output_state = deserialize_dict(response)
+                if not have_quit.is_set(): # make sure to not do Qt stuff if app has quit. (Not sure if necessary)
+                    window.output_changed.emit(output_state)
+
+            while not our_timer.hasExpired():
+                time.sleep(.0005)
+
 
 def run_app(sock: socket.socket):
     app = make_app()
