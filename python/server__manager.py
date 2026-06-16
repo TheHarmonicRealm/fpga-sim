@@ -68,13 +68,18 @@ def live_sim(sock: socket.socket):
         in_pipe.write(input_string + "\n")
         in_pipe.flush()
 
-        output_string = out_pipe.readline().strip()
-        is_system_string = output_string.startswith("secretkey")
-        if is_system_string:
-            output_string = output_string[len("secretkey"):]
-            send_message(output_string, conn)
-        elif not i_am_a_docker: # TODO: get to user if in docker!
-            print(output_string)
+        while True:
+            # receive strings until we get a system string
+            # we know system string is last because model eval is what triggers
+            # display prints and is called before sending state
+            output_string = out_pipe.readline().strip()
+            is_system_string = output_string.startswith("secretkey")
+            if is_system_string:
+                output_string = output_string[len("secretkey"):]
+                send_message(output_string, conn)
+                break
+            elif not i_am_a_docker: # TODO: get to user if in docker!
+                print(output_string)
     # TODO: properly close process. Writing "exit\n" and calling process.wait() hangs forever...
 
 def try_make(files: list[NamedFile]):
