@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from enum import Enum, auto
 from threading import Event
 from typing import Literal, overload, override
@@ -5,6 +6,7 @@ from typing import Literal, overload, override
 import gui__constants as c
 from PySide6.QtCore import (
     Property,
+    QObject,
     QPoint,
     QPropertyAnimation,
     QRect,
@@ -15,10 +17,12 @@ from PySide6.QtCore import (
     Slot,
 )
 from PySide6.QtGui import (
+    QAction,
     QBrush,
     QColor,
     QGuiApplication,
     QKeyEvent,
+    QKeySequence,
     QMouseEvent,
     QPainter,
     QPalette,
@@ -41,7 +45,6 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-
 from shared__util import bool_list_to_int, int_to_bool_list
 
 
@@ -126,6 +129,24 @@ def vbox_factory(*stuff: QLayout | QWidget, no_margins: bool = True) -> QVBoxLay
 
 def hbox_factory(*stuff: QLayout | QWidget, no_margins: bool = True) -> QHBoxLayout:
     return __box_factory(*stuff, vertical=False, no_margins=no_margins)
+
+def make_button(text: str, function: Callable):
+    bt = QPushButton(text)
+    bt.pressed.connect(function)
+    return bt
+
+def make_checkbox(text: str, function: Callable[[bool], ], *, checked: bool=False):
+    cb = QCheckBox(text)
+    cb.toggled.connect(function)
+    cb.setChecked(checked)
+    return cb
+
+def make_action(name: str,  function: Callable, shortcut: QKeySequence | str, parent: QObject):
+    ac = QAction(name, parent)
+    ac.setShortcut(shortcut)
+    ac.setAutoRepeat(False)
+    ac.triggered.connect(function)
+    return ac
 
 class AppStyle(QProxyStyle):
     '''Applied to checkboxes in `make_switch_checkbox()` to make them look like

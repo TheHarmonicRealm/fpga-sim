@@ -18,12 +18,14 @@ from gui__widgets import (
     EmptyWindow,
     hbox_factory,
     int_to_bool_list,
+    make_action,
     make_app,
+    make_button,
+    make_checkbox,
     vbox_factory,
 )
 from PySide6.QtCore import QDeadlineTimer, QPoint, Qt, QThread, QTimer, Signal, Slot
-from PySide6.QtGui import QAction, QKeySequence
-from PySide6.QtWidgets import QApplication, QCheckBox, QLabel, QPushButton
+from PySide6.QtWidgets import QApplication, QLabel
 from shared__util import big_receive, send_message
 
 msg_dict = dict[str, int]
@@ -49,12 +51,8 @@ class MainWindow(EmptyWindow):
         self.lights_line = BoardComponents.Lights()
         self.switches_line = BoardComponents.Switches()
 
-        self.frameless_checkbox = QCheckBox("Frameless")
-        self.frameless_checkbox.toggled.connect(self.set_frameless)
-
-        self.on_top_checkbox = QCheckBox("Always on top")
-        self.on_top_checkbox.setChecked(True)
-        self.on_top_checkbox.toggled.connect(self.set_on_top)
+        self.frameless_checkbox = make_checkbox("Frameless", self.set_frameless)
+        self.on_top_checkbox = make_checkbox("Always on top", self.set_on_top, checked=True)
 
         self.main_layout.addWidget(self.plus_buttons)
         self.main_layout.addWidget(self.four_digits)
@@ -62,14 +60,11 @@ class MainWindow(EmptyWindow):
 
         self.paused = False
 
-        self.pause_play_button = QPushButton("Pause simulation [P]")
-        self.pause_play_button.pressed.connect(self.pause_play)
+        self.pause_play_button = make_button("Pause simulation [P]", self.pause_play)
 
-        self.reset_inputs_button = QPushButton("Reset inputs [R]")
-        self.reset_inputs_button.released.connect(self.reset_inputs)
-
+        self.reset_inputs_button = make_button("Reset inputs [R]", self.reset_inputs)
+        
         self.main_layout.addLayout(hbox_factory(self.pause_play_button, self.reset_inputs_button))
-
 
         self.switches_line.state_changed.connect(lambda x: self.update_input_state(switches=x))
         self.plus_buttons.state_changed.connect(lambda x: self.update_input_state(buttons=x))
@@ -93,24 +88,13 @@ class MainWindow(EmptyWindow):
 
         # Pause/play with P.
         #   Spacebar is more obvious, but it makes tabbed navigation not work
-        self.pause_play_action = QAction("Pause/play", self)
-        self.pause_play_action.setShortcut(QKeySequence("P"))
-        self.pause_play_action.setAutoRepeat(False)
-        self.pause_play_action.triggered.connect(self.pause_play_button.click)
-        self.addAction(self.pause_play_action)
-
+        self.addAction(make_action("Pause/play", self.pause_play_button.click, "P", self))
+        
         # Reset inputs with R
-        self.reset_inputs_action = QAction("Reset inputs", self)
-        self.reset_inputs_action.setShortcut(QKeySequence("R"))
-        self.reset_inputs_action.setAutoRepeat(False)
-        self.reset_inputs_action.triggered.connect(self.reset_inputs_button.click)
-        self.addAction(self.reset_inputs_action)
-
-        self.ctrl_w_quit = QAction("Quit simulation", self)
-        self.ctrl_w_quit.setShortcut(QKeySequence("Ctrl+W"))
-        self.ctrl_w_quit.setAutoRepeat(False)
-        self.ctrl_w_quit.triggered.connect(QApplication.quit)
-        self.addAction(self.ctrl_w_quit)
+        self.addAction(make_action("Reset inputs", self.reset_inputs_button.click, "R", self))
+        
+        # Allow quitting with ctrl+W/cmd+W
+        self.addAction(make_action("Quit simulation", QApplication.quit, "Ctrl+W", self))
 
         self.pinged.connect(self.update_fps)
         self.input_time.connect(self.update_server)
