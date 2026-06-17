@@ -90,7 +90,7 @@ def live_sim(sock: socket.socket):
                 if not i_am_a_docker:
                     m = textwrap.indent(output_string, " " * 4)
                     if colorama_available:
-                        print(f"{Fore.BLUE}{m}{Style.RESET_ALL}")
+                        print(f"{Fore.BLUE}{Style.BRIGHT}{m}{Style.RESET_ALL}")
                     else:
                         print(m)
                 verilog_prints.append(output_string)
