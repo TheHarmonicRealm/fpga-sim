@@ -20,7 +20,7 @@
     # docker buildx build --cache-to type=local,dest=./docker_cache --cache-from type=local,src=./docker_cache -t fpga-sim-server:v1 . 
 
     #### Normal build (equivalent to the above command after first time, as the cache will be copied into the main cache)
-    # docker buildx build -t fpga-sim-server:v1 .
+    # docker buildx build -t fpga-sim-server:v2 .
 
 FROM ubuntu:22.04@sha256:fed6ddb82c61194e1814e93b59cfcb6759e5aa33c4e41bb3782313c2386ed6df
 WORKDIR /usr/bin/
