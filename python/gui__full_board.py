@@ -54,9 +54,10 @@ class MainWindow(EmptyWindow):
         self.frameless_checkbox = make_checkbox("Frameless", self.set_frameless)
         self.on_top_checkbox = make_checkbox("Always on top", self.set_on_top, checked=True)
 
-        self.pause_play_button = make_button("Pause simulation [P]", self.pause_play)
-
-        self.reset_inputs_button = make_button("Reset inputs [R]", self.reset_inputs)
+        self.pause_play_button = make_button("Pause simulation", self.pause_play)
+        self.pause_play_button.setToolTip("Shortcut: P")
+        self.reset_inputs_button = make_button("Reset inputs", self.reset_inputs)
+        self.reset_inputs_button.setToolTip("Shortcut: R")
 
         self.paused = False
 
