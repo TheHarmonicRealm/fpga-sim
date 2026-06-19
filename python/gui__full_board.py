@@ -54,17 +54,11 @@ class MainWindow(EmptyWindow):
         self.frameless_checkbox = make_checkbox("Frameless", self.set_frameless)
         self.on_top_checkbox = make_checkbox("Always on top", self.set_on_top, checked=True)
 
-        self.main_layout.addWidget(self.plus_buttons)
-        self.main_layout.addWidget(self.four_digits)
-        self.main_layout.addLayout(vbox_factory(self.lights_line, self.switches_line))
-
-        self.paused = False
-
         self.pause_play_button = make_button("Pause simulation [P]", self.pause_play)
 
         self.reset_inputs_button = make_button("Reset inputs [R]", self.reset_inputs)
-        
-        self.main_layout.addLayout(hbox_factory(self.pause_play_button, self.reset_inputs_button))
+
+        self.paused = False
 
         self.switches_line.state_changed.connect(lambda x: self.update_input_state(switches=x))
         self.plus_buttons.state_changed.connect(lambda x: self.update_input_state(buttons=x))
@@ -81,10 +75,27 @@ class MainWindow(EmptyWindow):
         self.last_time = time.perf_counter()
         self.fps_counter = QLabel("__.__/60 FPS")
 
+
+        model_interaction_box = vbox_factory(
+            self.plus_buttons,
+            self.four_digits,
+            self.lights_line, self.switches_line
+        )
+
+        # contains: pause, input reset, window settings, and FPS counter
+        gui_meta_box = vbox_factory(
+            hbox_factory(self.pause_play_button, self.reset_inputs_button),
+            hbox_factory(self.fps_counter, self.frameless_checkbox, self.on_top_checkbox)
+        )
+
         if "WAYLAND_DISPLAY" not in os.environ:
-            self.main_layout.addLayout(hbox_factory(self.fps_counter, self.frameless_checkbox, self.on_top_checkbox))
-        else: # always-on-top not available on Wayland. Instead right-click title bar
-            self.main_layout.addLayout(hbox_factory(self.fps_counter, self.frameless_checkbox))
+            self.on_top_checkbox.setToolTip("Your display server (Wayland) ignores this setting and requires you to instead right-click this window's top bar to pin it!")
+            self.on_top_checkbox.setDisabled(True)
+            self.on_top_checkbox.setChecked(False)
+            # TODO: "no click" mouse icon on hover? maybe also make this a function
+
+        self.main_layout.addLayout(model_interaction_box)
+        self.main_layout.addLayout(gui_meta_box)
 
         # Pause/play with P.
         #   Spacebar is more obvious, but it makes tabbed navigation not work
@@ -92,7 +103,7 @@ class MainWindow(EmptyWindow):
         
         # Reset inputs with R
         self.addAction(make_action("Reset inputs", self.reset_inputs_button.click, "R", self))
-        
+
         # Allow quitting with ctrl+W/cmd+W
         self.addAction(make_action("Quit simulation", QApplication.quit, "Ctrl+W", self))
 
@@ -241,8 +252,7 @@ class ListenThread(QThread):
 def run_app(sock: socket.socket):
     app = make_app()
     window = MainWindow(sock)
-    # hacky way to make sure it starts on top
-    # TODO: do it without needing to this
+    # pin to top at start (ignored on Wayland)
     window.set_on_top(True)
     window.show()
     app.exec()
