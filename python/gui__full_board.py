@@ -88,7 +88,7 @@ class MainWindow(EmptyWindow):
             hbox_factory(self.fps_counter, self.frameless_checkbox, self.on_top_checkbox)
         )
 
-        if "WAYLAND_DISPLAY" not in os.environ:
+        if "WAYLAND_DISPLAY" in os.environ:
             self.on_top_checkbox.setToolTip("Your display server (Wayland) ignores this setting and requires you to instead right-click this window's top bar to pin it!")
             self.on_top_checkbox.setDisabled(True)
             self.on_top_checkbox.setChecked(False)
