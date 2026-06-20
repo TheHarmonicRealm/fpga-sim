@@ -130,15 +130,19 @@ def vbox_factory(*stuff: QLayout | QWidget, no_margins: bool = True) -> QVBoxLay
 def hbox_factory(*stuff: QLayout | QWidget, no_margins: bool = True) -> QHBoxLayout:
     return __box_factory(*stuff, vertical=False, no_margins=no_margins)
 
-def make_button(text: str, function: Callable):
+def make_button(text: str, function: Callable, *, tooltip: str=""):
     bt = QPushButton(text)
     bt.pressed.connect(function)
+    if tooltip:
+        bt.setToolTip(tooltip)
     return bt
 
-def make_checkbox(text: str, function: Callable[[bool], ], *, checked: bool=False):
+def make_checkbox(text: str, function: Callable[[bool], ], *, checked: bool=False, tooltip: str=""):
     cb = QCheckBox(text)
     cb.toggled.connect(function)
     cb.setChecked(checked)
+    if tooltip:
+        cb.setToolTip(tooltip)
     return cb
 
 def make_action(name: str,  function: Callable, shortcut: QKeySequence | str, parent: QObject):
