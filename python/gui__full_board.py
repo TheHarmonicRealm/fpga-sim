@@ -16,6 +16,7 @@ from colorama import Fore, Style
 from gui__widgets import (
     BoardComponents,
     EmptyWindow,
+    gray_out_and_disable,
     hbox_factory,
     int_to_bool_list,
     make_action,
@@ -89,10 +90,9 @@ class MainWindow(EmptyWindow):
         )
 
         if "WAYLAND_DISPLAY" in os.environ:
-            self.on_top_checkbox.setToolTip("Your display server (Wayland) ignores this setting and requires you to instead right-click this window's top bar to pin it!")
-            self.on_top_checkbox.setDisabled(True)
-            self.on_top_checkbox.setChecked(False)
+            gray_out_and_disable(self.on_top_checkbox, "Your display server (Wayland) ignores this setting and requires you to instead right-click this window's top bar to pin it!", checked=False)
             # TODO: "no click" mouse icon on hover? maybe also make this a function
+            # TODO: can we get the pinned state and make this track it if on Wayland?
 
         self.main_layout.addLayout(model_interaction_box)
         self.main_layout.addLayout(gui_meta_box)

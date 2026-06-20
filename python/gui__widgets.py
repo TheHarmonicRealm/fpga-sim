@@ -152,6 +152,17 @@ def make_action(name: str,  function: Callable, shortcut: QKeySequence | str, pa
     ac.triggered.connect(function)
     return ac
 
+def gray_out_and_disable(w: QWidget, text: str, *, checked: bool | None=None):
+    '''Grays out widget and shows tooltip. Tries to set check state.'''
+    w.setDisabled(True)
+    w.setToolTip(text)
+    if checked is not None:
+        try:
+            w.setChecked(checked)
+        except AttributeError:
+            print(f"gray_out_with_tooltip(): can't check a {type(w).__qualname__}!")
+    # TODO: registering event filter to set cursor WORKS but cursor is not reflected :( idk
+
 class AppStyle(QProxyStyle):
     '''Applied to checkboxes in `make_switch_checkbox()` to make them look like
     vertical binary switches.'''
