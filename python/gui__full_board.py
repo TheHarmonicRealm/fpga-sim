@@ -225,9 +225,9 @@ class ListenThread(QThread):
 
         while True:
             our_timer.setPreciseRemainingTime(0, nsecs=round(1_000_000_000/60))
-            window.pinged.emit()
             window.input_time.emit()
             response = big_receive(sock).decode()
+            window.pinged.emit()
 
             # quitting app sends an exit signal then server replies with exit
             if response == "exit":
