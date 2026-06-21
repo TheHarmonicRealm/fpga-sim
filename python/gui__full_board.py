@@ -92,7 +92,6 @@ class MainWindow(EmptyWindow):
         if "WAYLAND_DISPLAY" in os.environ:
             gray_out_and_disable(self.on_top_checkbox, "Your display server (Wayland) ignores this setting and requires you to instead right-click this window's top bar to pin it!", checked=False)
             # TODO: "no click" mouse icon on hover? maybe also make this a function
-            # TODO: can we get the pinned state and make this track it if on Wayland?
 
         self.main_layout.addLayout(model_interaction_box)
         self.main_layout.addLayout(gui_meta_box)
