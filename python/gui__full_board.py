@@ -14,6 +14,7 @@ from statistics import mean
 from typing import TypedDict
 
 from colorama import Fore, Style
+from gui__util import reconstruct_socket_unix, reconstruct_socket_windows
 from gui__widgets import (
     BoardComponents,
     EmptyWindow,
@@ -280,16 +281,10 @@ if __name__ == "__main__":
 
     if sys.platform != 'win32':
         # reconstruct socket from regular file descriptor
-        try:
-            sock_fd = int(sys.argv[1])
-            sock = socket.fromfd(sock_fd, socket.AF_INET, socket.SOCK_STREAM)
-        except OSError, IndexError:
-            # TODO: make names more logical
-            print("Don't run gui__main directly!! Run client__shell")
-            exit(1)
+        sock = reconstruct_socket_unix(int(sys.argv[1]))
     else: # make socket from received output of socket.share()
-        windows_socket = base64.b64decode(sys.stdin.buffer.read())
-        sock = socket.fromshare(windows_socket)
+        socket_share_data = base64.b64decode(sys.stdin.buffer.read())
+        sock = reconstruct_socket_windows(socket_share_data)
 
     run_app(sock)
 
