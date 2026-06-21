@@ -65,8 +65,6 @@ def live_sim(sock: socket.socket):
                 break
             case "": # Received empty: paused
                 continue
-            case "nc": # Received "nc": no input change, send model an empty string to continue
-                input_string = ""
             case _: # Otherwise input must be dataclass string
                 try: # Try to convert; if it fails print error rather than crash
                     input_string = str(deserialize_dict(inp))

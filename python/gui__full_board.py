@@ -194,7 +194,7 @@ class MainWindow(EmptyWindow):
                 print(difference)
                 send_message(str(difference), self.sock)
             else:
-                send_message("nc", self.sock)
+                send_message("{}", self.sock)
             self.previous.update(self.latest)
         else:
             send_message("", self.sock)

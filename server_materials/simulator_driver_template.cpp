@@ -153,8 +153,9 @@ $output_ports
     while (1) {
         getline(std::cin, input);
         
-        if(input.empty()) {
-            // No new input sent, do nothing
+        if(input == "{}" || input.empty()) {
+            // Empty string or empty dict sent: do nothing
+            // note that the latter doesn't happen under current design
         }
         else {
             update_inputs(input, input_ports_map);
