@@ -69,6 +69,7 @@ class MainWindow(EmptyWindow):
         self.plus_buttons.state_changed.connect(lambda x: self.update_input_state(buttons=x))
 
         self.latest: msg_dict = self.input_state.copy()
+        self.previous = self.latest.copy() # start: previous is 0 too
 
         self.should_quit = False
 
@@ -186,13 +187,17 @@ class MainWindow(EmptyWindow):
 
     def update_server(self):
         if not self.paused:
-            send_message(str(self.latest), self.sock)
+            if self.latest != self.previous:
+                send_message(str(self.latest), self.sock)
+            else:
+                send_message("nc", self.sock)
+            self.previous.update(self.latest)
         else:
             send_message("", self.sock)
 
 
     def update_latest(self, new_latest: msg_dict):
-        self.latest = new_latest
+        self.latest.update(new_latest)
 
     def pause_play(self):
         self.paused = not self.paused
