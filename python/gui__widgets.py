@@ -6,6 +6,7 @@ from typing import Literal, overload, override
 import gui__constants as c
 from PySide6.QtCore import (
     Property,
+    QEvent,
     QObject,
     QPoint,
     QPropertyAnimation,
@@ -20,6 +21,7 @@ from PySide6.QtGui import (
     QAction,
     QBrush,
     QColor,
+    QEnterEvent,
     QGuiApplication,
     QKeyEvent,
     QKeySequence,
@@ -31,6 +33,7 @@ from PySide6.QtGui import (
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
+    QGraphicsOpacityEffect,
     QGridLayout,
     QHBoxLayout,
     QLayout,
@@ -152,16 +155,38 @@ def make_action(name: str,  function: Callable, shortcut: QKeySequence | str, pa
     ac.triggered.connect(function)
     return ac
 
-def gray_out_and_disable(w: QWidget, text: str, *, checked: bool | None=None):
-    '''Grays out widget and shows tooltip. Tries to set check state.'''
-    w.setDisabled(True)
-    w.setToolTip(text)
+class _ForbidFilter(QObject):
+    def __init__(self, /, parent: QObject | None = None, *, objectName: str | None = None) -> None:
+        super().__init__(parent, objectName=objectName)
+        self.cant_cursor = False
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:
+        if isinstance(event, QEnterEvent):
+            if not self.cant_cursor:
+                try:
+                    watched.setCursor(Qt.CursorShape.ForbiddenCursor) # pyright: ignore[reportAttributeAccessIssue]
+                except AttributeError:
+                    print(f"_ForbidFilter: Can't set cursor of a {watched.__qualname__}")
+                    self.cant_cursor = True
+                return True
+        if isinstance(event, QMouseEvent):
+            return True
+        else:
+            return QObject.eventFilter(self, watched, event)
+
+def pseudo_disable(w: QWidget, tooltip: str, *, checked: bool | None = None):
+    '''Makes a widget act disabled, adding a ForbiddenCursor. Sets opacity low,
+    prevents keyboard focus and ignores mouse clicks, sets a tooltip, and sets
+    check state if desired.'''
+    w.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+    w.setGraphicsEffect(QGraphicsOpacityEffect(w, opacity=.5))
+    w._forbid_filter = _ForbidFilter() # pyright: ignore[reportAttributeAccessIssue]
+    w.installEventFilter(w._forbid_filter) # pyright: ignore[reportAttributeAccessIssue]
+    w.setToolTip(tooltip)
     if checked is not None:
         try:
-            w.setChecked(checked)
+            w.setChecked(checked) # pyright: ignore[reportAttributeAccessIssue]
         except AttributeError:
-            print(f"gray_out_with_tooltip(): can't check a {type(w).__qualname__}!")
-    # TODO: registering event filter to set cursor WORKS but cursor is not reflected :( idk
+            print(f"pseudo_disable(): can't check/uncheck a {w.__qualname__}!")
 
 class AppStyle(QProxyStyle):
     '''Applied to checkboxes in `make_switch_checkbox()` to make them look like

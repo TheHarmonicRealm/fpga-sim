@@ -16,13 +16,13 @@ from colorama import Fore, Style
 from gui__widgets import (
     BoardComponents,
     EmptyWindow,
-    gray_out_and_disable,
     hbox_factory,
     int_to_bool_list,
     make_action,
     make_app,
     make_button,
     make_checkbox,
+    pseudo_disable,
     vbox_factory,
 )
 from PySide6.QtCore import QDeadlineTimer, QPoint, Qt, QThread, QTimer, Signal, Slot
@@ -54,7 +54,11 @@ class MainWindow(EmptyWindow):
 
         # TODO: style tooltips; seems to be stylesheets-managed
         self.frameless_checkbox = make_checkbox("Frameless", self.set_frameless)
+
         self.on_top_checkbox = make_checkbox("Always on top", self.set_on_top, checked=True)
+
+        if "WAYLAND_DISPLAY" in os.environ:
+            pseudo_disable(self.on_top_checkbox, tooltip="Your display server (Wayland) ignores this setting and requires you to instead right-click this window's top bar to pin it!", checked=False)
 
         self.pause_play_button = make_button("Pause simulation", self.pause_play, tooltip="Shortcut: P")
         self.reset_inputs_button = make_button("Reset inputs", self.reset_inputs, tooltip="Shortcut: R")
@@ -88,10 +92,6 @@ class MainWindow(EmptyWindow):
             hbox_factory(self.pause_play_button, self.reset_inputs_button),
             hbox_factory(self.fps_counter, self.frameless_checkbox, self.on_top_checkbox)
         )
-
-        if "WAYLAND_DISPLAY" in os.environ:
-            gray_out_and_disable(self.on_top_checkbox, "Your display server (Wayland) ignores this setting and requires you to instead right-click this window's top bar to pin it!", checked=False)
-            # TODO: "no click" mouse icon on hover? maybe also make this a function
 
         self.main_layout.addLayout(model_interaction_box)
         self.main_layout.addLayout(gui_meta_box)
