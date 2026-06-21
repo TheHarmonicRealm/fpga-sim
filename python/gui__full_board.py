@@ -11,6 +11,7 @@ import textwrap
 import threading
 import time
 from statistics import mean
+from typing import TypedDict
 
 from colorama import Fore, Style
 from gui__widgets import (
@@ -27,25 +28,38 @@ from gui__widgets import (
 )
 from PySide6.QtCore import QDeadlineTimer, QPoint, Qt, QThread, QTimer, Signal, Slot
 from PySide6.QtWidgets import QApplication, QLabel
-from shared__util import big_receive, send_message
+from shared__util import big_receive, dict_diff, send_message
 
-msg_dict = dict[str, int]
 
-def deserialize_dict(d: str) -> msg_dict:
+class OutputDict(TypedDict):
+    lights: int
+    DP: int
+    anode: int
+    segment: int
+
+class InputDict(TypedDict):
+    UB: int
+    DB: int
+    LB: int
+    RB: int
+    CB: int
+    switches: int
+
+def deserialize_dict(d: str) -> dict:
     return ast.literal_eval(d)
 
 class MainWindow(EmptyWindow):
-    input_changed = Signal(object)
-    output_changed = Signal(object)
-    pinged = Signal()
+    input_changed = Signal(InputDict)
+    output_changed = Signal(OutputDict)
     input_time = Signal()
+    pinged = Signal()
     close_signal = Signal()
     def __init__(self, sock: socket.socket):
         super().__init__("FPGA board view")
         self.sock = sock
 
-        self.output_state = {"lights": 0, "anode": 0b1111, "segment": 0b111_111}
-        self.input_state = {"UB": 0, "DB": 0, "LB": 0, "RB": 0, "CB": 0, "switches": 0}
+        self.output_state: OutputDict = {"lights": 0, "DP": 0b1, "anode": 0b1111, "segment": 0b111_111}
+        self.input_state: InputDict = {"UB": 0, "DB": 0, "LB": 0, "RB": 0, "CB": 0, "switches": 0}
 
         self.plus_buttons = BoardComponents.Buttons(self.shift_pressed)
         self.four_digits = BoardComponents.FourDigits()
@@ -68,7 +82,7 @@ class MainWindow(EmptyWindow):
         self.switches_line.state_changed.connect(lambda x: self.update_input_state(switches=x))
         self.plus_buttons.state_changed.connect(lambda x: self.update_input_state(buttons=x))
 
-        self.latest: msg_dict = self.input_state.copy()
+        self.latest = self.input_state.copy()
         self.previous = self.latest.copy() # start: previous is 0 too
 
         self.should_quit = False
@@ -146,7 +160,7 @@ class MainWindow(EmptyWindow):
         self.show()
 
     @Slot(object)
-    def set_output_state(self, new_output_state: msg_dict):
+    def set_output_state(self, new_output_state: OutputDict):
         try:
             self.lights_line.set_output_state(new_output_state["lights"])
             self.four_digits.set(new_output_state["segment"], new_output_state["DP"], new_output_state["anode"])
@@ -187,20 +201,14 @@ class MainWindow(EmptyWindow):
 
     def update_server(self):
         if not self.paused:
-            # makes set of both dicts' keys and values; set contains any
-            # key-value pairs exclusive to latest. 
-            if difference := self.latest.items() - self.previous.items():
-                difference = dict(difference) # dict() reconstructs from items
-                print(difference)
-                send_message(str(difference), self.sock)
-            else:
-                send_message("{}", self.sock)
+            # only sends the ones that changed
+            send_message(str(dict_diff(self.latest, self.previous)), self.sock)
             self.previous.update(self.latest)
         else:
             send_message("", self.sock)
 
 
-    def update_latest(self, new_latest: msg_dict):
+    def update_latest(self, new_latest: InputDict):
         self.latest.update(new_latest)
 
     def pause_play(self):
@@ -249,7 +257,7 @@ class ListenThread(QThread):
 
                 
                 response_part_2 = big_receive(sock).decode()
-                output_state = deserialize_dict(response_part_2)
+                output_state: OutputDict = deserialize_dict(response_part_2) # pyright: ignore[reportAssignmentType]
                 if not have_quit.is_set(): # make sure to not do Qt stuff if app has quit. (Not sure if necessary)
                     window.output_changed.emit(output_state)
 
