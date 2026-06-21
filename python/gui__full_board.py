@@ -187,8 +187,12 @@ class MainWindow(EmptyWindow):
 
     def update_server(self):
         if not self.paused:
-            if self.latest != self.previous:
-                send_message(str(self.latest), self.sock)
+            # makes set of both dicts' keys and values; set contains any
+            # key-value pairs exclusive to latest. 
+            if difference := self.latest.items() - self.previous.items():
+                difference = dict(difference) # dict() reconstructs from items
+                print(difference)
+                send_message(str(difference), self.sock)
             else:
                 send_message("nc", self.sock)
             self.previous.update(self.latest)
