@@ -33,13 +33,13 @@ from PySide6.QtWidgets import QApplication, QLabel
 from shared__util import big_receive, dict_diff, send_message
 
 
-class OutputDict(TypedDict):
+class OutputDict(TypedDict, total=False):
     lights: int
     DP: int
     anode: int
     segment: int
 
-class InputDict(TypedDict):
+class InputDict(TypedDict, total=False):
     UB: int
     DB: int
     LB: int
