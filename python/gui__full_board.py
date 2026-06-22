@@ -4,7 +4,6 @@ Launched as subprocess from client__shell.py
 
 import ast
 import base64
-import os
 import socket
 import sys
 import textwrap
@@ -59,7 +58,7 @@ class MainWindow(EmptyWindow):
     input_time = Signal()
     pinged = Signal()
     close_signal = Signal()
-    def __init__(self, sock: socket.socket):
+    def __init__(self, sock: socket.socket, listener_done: threading.Event, have_quit: threading.Event):
         super().__init__("FPGA board view")
         self.sock = sock
 
@@ -132,7 +131,7 @@ class MainWindow(EmptyWindow):
         self.input_time.connect(self.update_server)
 
         # important: put thread under self or gc destroys it immediately
-        self.t = ListenThread(window=self)
+        self.t = ListenThread(self, listener_done, have_quit)
         self.t.start()
 
         QTimer.singleShot(0, lambda: self.setFixedSize(self.minimumSizeHint()))
@@ -150,7 +149,7 @@ class MainWindow(EmptyWindow):
         try:
             self.lights_line.set_output_state(self.output_state["lights"])
             self.four_digits.set(self.output_state["segment"], self.output_state["DP"], self.output_state["anode"])
-        except KeyError:
+        except KeyError: # NOTE: see above... this will never happen currently
             print("Error: your verilog code's inputs and/or outputs did not match the required format for the \"classic\" board.")
             print(f"Please refer to the template at {Fore.CYAN}{Style.BRIGHT}./templates/classic.v{Style.RESET_ALL} if this is the board you meant to use.")
              # TODO: do this in a smarter way, matching sizes too,
@@ -211,9 +210,12 @@ class MainWindow(EmptyWindow):
 
 class ListenThread(QThread):
     
-    def __init__(self, window: MainWindow) -> None:
+    def __init__(self, window: MainWindow, listener_done: threading.Event, have_quit: threading.Event):
         super().__init__()
         self.window = window
+
+        self.listener_done = listener_done
+        self.have_quit = have_quit
 
     def run(self):
         window = self.window
@@ -230,7 +232,7 @@ class ListenThread(QThread):
             window.pinged.emit() # update FPS after receiving
 
             if response == "exit":
-                listener_done.set()
+                self.listener_done.set()
                 break
             else:
                 verilog_prints = ast.literal_eval(response)
@@ -240,16 +242,16 @@ class ListenThread(QThread):
 
                 # get the output dict expected after the Verilog list
                 output_state: OutputDict = deserialize_dict(big_receive(sock).decode()) # pyright: ignore[reportAssignmentType]
-                if not have_quit.is_set(): # make sure to not do Qt stuff if app has quit. (Not sure if necessary)
+                if not self.have_quit.is_set(): # make sure to not do Qt stuff if app has quit. (Not sure if necessary)
                     window.output_changed.emit(output_state)
 
             while not our_timer.hasExpired():
-                time.sleep(.0005)
+                time.sleep(.0001)
 
 
-def run_app(sock: socket.socket):
+def run_app(sock: socket.socket, listener_done: threading.Event, have_quit: threading.Event):
     app = make_app()
-    window = MainWindow(sock)
+    window = MainWindow(sock, listener_done, have_quit)
     # pin to top at start (ignored on Wayland)
     window.set_on_top(True)
     app.exec()
@@ -266,7 +268,7 @@ if __name__ == "__main__":
         socket_share_data = base64.b64decode(sys.stdin.buffer.read())
         sock = reconstruct_socket_windows(socket_share_data)
 
-    run_app(sock)
+    run_app(sock, listener_done, have_quit)
 
     # app has been quit. tell server we are quitting then wait for
     #   listener to get ACK back. Necessary to have a "clean" socket on exit
