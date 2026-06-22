@@ -60,8 +60,8 @@ class MainWindow(EmptyWindow):
         super().__init__("FPGA board view")
         self.sock = sock
 
-        self.output_state: OutputDict = {"lights": 0, "DP": 0b1, "anode": 0b1111, "segment": 0b111_111}
-        self.input_state: InputDict = {"UB": 0, "DB": 0, "LB": 0, "RB": 0, "CB": 0, "switches": 0}
+        self.output_state = OutputDict(lights=0, DP=0b1, anode=0b1111, segment=0b111_111)
+        self.input_state = InputDict(UB=0, DB=0, LB=0, RB=0, CB=0, switches=0)
 
         self.plus_buttons = BoardComponents.Buttons(self.shift_pressed)
         self.four_digits = BoardComponents.FourDigits()
