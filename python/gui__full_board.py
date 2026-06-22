@@ -33,13 +33,16 @@ from PySide6.QtWidgets import QApplication, QLabel
 from shared__util import big_receive, dict_diff, send_message
 
 
-class OutputDict(TypedDict, total=False):
+class OutputDict(TypedDict, total=True):
+    # it doesn't need to be total but you can't mark a specific instance as
+    # total so this lies to the type checker to make set_output_state not busy
     lights: int
     DP: int
     anode: int
     segment: int
 
 class InputDict(TypedDict, total=False):
+    # non-total to allow sending just diffs up
     UB: int
     DB: int
     LB: int
@@ -140,16 +143,19 @@ class MainWindow(EmptyWindow):
 
     @Slot(object)
     def set_output_state(self, new_output_state: OutputDict):
+        # NOTE: if new_output_state adds keys or is missing some will not error
+        # Must become job of another component program to verify that the
+        # Verilog program's ports match the GUI program's ports
+        self.output_state.update(new_output_state)
         try:
-            self.lights_line.set_output_state(new_output_state["lights"])
-            self.four_digits.set(new_output_state["segment"], new_output_state["DP"], new_output_state["anode"])
+            self.lights_line.set_output_state(self.output_state["lights"])
+            self.four_digits.set(self.output_state["segment"], self.output_state["DP"], self.output_state["anode"])
         except KeyError:
             print("Error: your verilog code's inputs and/or outputs did not match the required format for the \"classic\" board.")
             print(f"Please refer to the template at {Fore.CYAN}{Style.BRIGHT}./templates/classic.v{Style.RESET_ALL} if this is the board you meant to use.")
              # TODO: do this in a smarter way, matching sizes too,
              # and find a way to also match port widths
             QApplication.quit()
-        self.output_state.update(new_output_state)
 
     def update_input_state(self, *, buttons: int | None = None, switches: int | None = None):
         if buttons is not None:
