@@ -18,6 +18,7 @@ from gui__util import reconstruct_socket_unix, reconstruct_socket_windows
 from gui__widgets import (
     BoardComponents,
     EmptyWindow,
+    InputWidget,
     hbox_factory,
     int_to_bool_list,
     make_action,
@@ -66,6 +67,8 @@ class MainWindow(EmptyWindow):
         self.four_digits = BoardComponents.FourDigits()
         self.lights_line = BoardComponents.Lights()
         self.switches_line = BoardComponents.Switches()
+
+        self.input_widgets: list[InputWidget] = [self.plus_buttons, self.switches_line]
 
         # TODO: style tooltips; seems to be stylesheets-managed
         self.frameless_checkbox = make_checkbox("Frameless", self.set_frameless)
@@ -132,10 +135,8 @@ class MainWindow(EmptyWindow):
         QTimer.singleShot(0, lambda: self.setFixedSize(self.minimumSizeHint()))
     
     def reset_inputs(self):
-        for button in self.plus_buttons.buttons_list:
-            button.setChecked(False)
-        for switch in self.switches_line.checkboxes:
-            switch.setChecked(False)
+        for w in self.input_widgets:
+            w.reset_device()
 
     def set_frameless(self, enable: bool):
         self.setWindowFlag(Qt.WindowType.FramelessWindowHint, enable)

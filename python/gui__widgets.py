@@ -494,6 +494,18 @@ class SevenSegmentLight:
                 light.set_light(False)
             self.DP.set_light(False)
 
+
+class InputWidget(QWidget):
+    '''Should be a subclass of ABC but that is incompatible with how PySide6
+    works without more tricks.
+    Pretend that reset_device() is really an abstract method.'''
+    def __init__(self):
+        super().__init__()
+
+    # @abstractmethod
+    def reset_device(self) -> None:
+        raise NotImplementedError(f"{self.__qualname__} must override method reset_device() of InputDevice!")
+
 class BoardComponents:
     class FourDigits(QWidget):
         def __init__(self):
@@ -519,7 +531,7 @@ class BoardComponents:
                 digit.set_lights(cathode, dp, enable)
 
 
-    class Switches(QWidget):
+    class Switches(InputWidget):
         state_changed = Signal(int)
         def __init__(self):
             super().__init__()
@@ -543,6 +555,11 @@ class BoardComponents:
 
         def __get_input_state(self) -> int:
             return bool_list_to_int([checkbox.isChecked() for checkbox in self.checkboxes])
+        
+        @override
+        def reset_device(self):
+            for switch in self.checkboxes:
+                switch.setChecked(False)
 
     class Lights(QWidget):
         def __init__(self):
@@ -556,9 +573,9 @@ class BoardComponents:
             for light, state in zip(self.lights, int_to_bool_list(new_state, 16, invert=False)):
                 light.set_light(state)
 
-    class Buttons(QWidget):
+    class Buttons(InputWidget):
         state_changed = Signal(int)
-        def __init__(self, shift_pressed: Event) -> None:
+        def __init__(self, shift_pressed: Event):
             super().__init__()
             layout_hook = QGridLayout()
             self.setLayout(layout_hook)
@@ -586,3 +603,8 @@ class BoardComponents:
             # new_button is forced to true if provided; it is currently pressed but not checked
             output_list = [b.isChecked() if b is not new_button else True for b in self.buttons_list]
             return bool_list_to_int(output_list)
+        
+        @override
+        def reset_device(self):
+            for button in self.buttons_list:
+                button.setChecked(False)
