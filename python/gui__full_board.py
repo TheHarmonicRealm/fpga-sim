@@ -271,7 +271,6 @@ def run_app(sock: socket.socket):
     window = MainWindow(sock)
     # pin to top at start (ignored on Wayland)
     window.set_on_top(True)
-    window.show()
     app.exec()
     return app
 
