@@ -232,8 +232,6 @@ class ListenThread(QThread):
         self.window = window
 
     def run(self):
-        global listener_done
-        global have_quit
         window = self.window
         sock = window.sock
 
