@@ -225,22 +225,21 @@ class ListenThread(QThread):
         while True:
             our_timer.setPreciseRemainingTime(0, nsecs=round(1_000_000_000/60))
             window.input_time.emit()
+            # response is either exit or a (maybe empty) list of lines printed by the Verilog program
             response = big_receive(sock).decode()
-            window.pinged.emit()
+            window.pinged.emit() # update FPS after receiving
 
-            # quitting app sends an exit signal then server replies with exit
             if response == "exit":
                 listener_done.set()
                 break
-            else: # hasn't given exit response: continue as normal for a frame or so
+            else:
                 verilog_prints = ast.literal_eval(response)
                 if len(verilog_prints) > 0:
                     message = "\n".join([textwrap.indent(s, " " * 4) for s in verilog_prints])
                     print(f"{Fore.BLUE}{Style.BRIGHT}{message}{Style.RESET_ALL}")
 
-                
-                response_part_2 = big_receive(sock).decode()
-                output_state: OutputDict = deserialize_dict(response_part_2) # pyright: ignore[reportAssignmentType]
+                # get the output dict expected after the Verilog list
+                output_state: OutputDict = deserialize_dict(big_receive(sock).decode()) # pyright: ignore[reportAssignmentType]
                 if not have_quit.is_set(): # make sure to not do Qt stuff if app has quit. (Not sure if necessary)
                     window.output_changed.emit(output_state)
 
