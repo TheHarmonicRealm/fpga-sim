@@ -89,6 +89,8 @@ class EmptyWindow(QMainWindow):
 
         self.old_pos = self.pos()
 
+        self.is_wayland =  "WAYLAND_DISPLAY" in os.environ
+
     # Make window draggable from anywhere
     # (Added to allow moving while frameless)
     @override

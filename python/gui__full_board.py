@@ -75,7 +75,7 @@ class MainWindow(EmptyWindow):
 
         self.on_top_checkbox = make_checkbox("Always on top", self.set_on_top, checked=True)
 
-        if "WAYLAND_DISPLAY" in os.environ:
+        if not self.is_wayland:
             pseudo_disable(self.on_top_checkbox, tooltip="Your display server (Wayland) ignores this setting and requires you to instead right-click this window's top bar to pin it!", checked=False)
 
         self.pause_play_button = make_button("Pause simulation", self.pause_play, tooltip="Shortcut: P")
