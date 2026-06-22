@@ -1,3 +1,5 @@
+import os
+import sys
 import threading
 from collections.abc import Callable
 from enum import Enum, auto
@@ -14,6 +16,7 @@ from PySide6.QtCore import (
     QSequentialAnimationGroup,
     QSize,
     Qt,
+    QTimer,
     Signal,
     Slot,
 )
@@ -87,8 +90,6 @@ class EmptyWindow(QMainWindow):
         self.setCentralWidget(central_widget)
         self.shift_pressed = threading.Event()
 
-        self.old_pos = self.pos()
-
         self.is_wayland =  "WAYLAND_DISPLAY" in os.environ
 
     # Make window draggable from anywhere
@@ -109,6 +110,30 @@ class EmptyWindow(QMainWindow):
         key = event.key()
         if key == Qt.Key.Key_Shift:
             self.shift_pressed.clear()
+
+    
+    def set_frameless(self, enable: bool):
+        self.setWindowFlag(Qt.WindowType.FramelessWindowHint, enable)
+
+        if sys.platform == 'win32':
+            if not enable:
+                # nudge a tiny bit to fix issue where size is wrong after
+                #   made frameful, then wait a tiny bit before going home
+                target_pos = self.pos() - QPoint(0, 30) 
+                QTimer.singleShot(0, lambda: self.move(self.pos() + QPoint(1, 0)))
+                QTimer.singleShot(50, lambda: self.move(target_pos))
+            else: # move down by size of top bar
+                QTimer.singleShot(0, lambda: self.move(self.pos() + QPoint(0, 30)))
+        elif sys.platform == 'darwin':
+            if enable:
+                self.move(self.pos() + QPoint(0, 28))
+            else:
+                self.move(self.pos() + QPoint(0, -28))
+        self.show()
+
+    def set_on_top(self, enable: bool):
+        self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, enable)
+        self.show()
 
 # Narrow type so type checker is happy with vbox/hbox calls
 @overload

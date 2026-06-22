@@ -138,29 +138,6 @@ class MainWindow(EmptyWindow):
         for w in self.input_widgets:
             w.reset_device()
 
-    def set_frameless(self, enable: bool):
-        self.setWindowFlag(Qt.WindowType.FramelessWindowHint, enable)
-
-        if sys.platform == 'win32':
-            if not enable:
-                # nudge a tiny bit to fix issue where size is wrong after
-                #   made frameful, then wait a tiny bit before going home
-                target_pos = self.pos() - QPoint(0, 30) 
-                QTimer.singleShot(0, lambda: self.move(self.pos() + QPoint(1, 0)))
-                QTimer.singleShot(50, lambda: self.move(target_pos))
-            else: # move down by size of top bar
-                QTimer.singleShot(0, lambda: self.move(self.pos() + QPoint(0, 30)))
-        elif sys.platform == 'darwin':
-            if enable:
-                self.move(self.pos() + QPoint(0, 28))
-            else:
-                self.move(self.pos() + QPoint(0, -28))
-        self.show()
-
-    def set_on_top(self, enable: bool):
-        self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, enable)
-        self.show()
-
     @Slot(object)
     def set_output_state(self, new_output_state: OutputDict):
         try:
