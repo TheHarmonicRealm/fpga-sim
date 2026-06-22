@@ -1,6 +1,6 @@
+import threading
 from collections.abc import Callable
 from enum import Enum, auto
-from threading import Event
 from typing import Literal, overload, override
 
 import gui__constants as c
@@ -85,7 +85,7 @@ class EmptyWindow(QMainWindow):
         central_widget = QWidget()
         central_widget.setLayout(self.main_layout)
         self.setCentralWidget(central_widget)
-        self.shift_pressed = Event()
+        self.shift_pressed = threading.Event()
 
         self.old_pos = self.pos()
 
@@ -339,7 +339,7 @@ class StickyButton(QPushButton):
     state is quite hard to read in dark mode on both Mac and Windows 11.'''
     sticky_press = Signal()
     sticky_release = Signal()
-    def __init__(self, shift_pressed: Event):
+    def __init__(self, shift_pressed: threading.Event):
         super().__init__()
         self.setFixedSize(c.Sizes.light)
         self.setCheckable(True)
@@ -577,7 +577,7 @@ class BoardComponents:
 
     class Buttons(InputWidget):
         state_changed = Signal(int)
-        def __init__(self, shift_pressed: Event):
+        def __init__(self, shift_pressed: threading.Event):
             super().__init__()
             layout_hook = QGridLayout()
             self.setLayout(layout_hook)
