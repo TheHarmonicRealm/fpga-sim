@@ -6,8 +6,6 @@ import base64
 import socket
 import sys
 import threading
-import time
-from statistics import mean
 from typing import TypedDict
 
 from colorama import Fore, Style
@@ -15,19 +13,16 @@ from gui__base import BaseGUIWindow
 from gui__util import reconstruct_socket_unix, reconstruct_socket_windows
 from gui__widgets import (
     BoardComponents,
-    InputWidget,
-    hbox_factory,
     int_to_bool_list,
     make_action,
     make_app,
     make_button,
-    make_checkbox,
     pseudo_disable,
     vbox_factory,
 )
-from PySide6.QtCore import QDeadlineTimer, QPoint, Qt, QThread, QTimer, Signal, Slot
-from PySide6.QtWidgets import QApplication, QLabel
-from shared__util import big_receive, dict_diff, send_message
+from PySide6.QtCore import QTimer, Slot
+from PySide6.QtWidgets import QApplication
+from shared__util import dict_diff, send_message
 
 
 class OutputDict(TypedDict, total=True):
@@ -59,12 +54,7 @@ class MainWindow(BaseGUIWindow):
         self.lights_line = BoardComponents.Lights()
         self.switches_line = BoardComponents.Switches()
 
-        self.input_widgets: list[InputWidget] = [self.plus_buttons, self.switches_line]
-
-        # TODO: style tooltips; seems to be stylesheets-managed
-        self.frameless_checkbox = make_checkbox("Frameless", self.set_frameless)
-
-        self.on_top_checkbox = make_checkbox("Always on top", self.set_on_top, checked=True)
+        self.input_widgets += [self.plus_buttons, self.switches_line]
 
         if not self.is_wayland:
             pseudo_disable(self.on_top_checkbox, tooltip="Your display server (Wayland) ignores this setting and requires you to instead right-click this window's top bar to pin it!", checked=False)
@@ -86,25 +76,14 @@ class MainWindow(BaseGUIWindow):
         self.output_changed.connect(self.set_output_state)
         self.close_signal.connect(self.quit_program)
 
-        self.last_few_fps: list[float] = []
-        self.last_time = time.perf_counter()
-        self.fps_counter = QLabel("__.__/60 FPS")
-
-
-        model_interaction_box = vbox_factory(
-            self.plus_buttons,
-            self.four_digits,
-            self.lights_line, self.switches_line
+        self.model_interaction_box.addLayout(
+            vbox_factory(
+                self.plus_buttons,
+                self.four_digits,
+                self.lights_line,
+                self.switches_line,
+            )
         )
-
-        # contains: pause, input reset, window settings, and FPS counter
-        gui_meta_box = vbox_factory(
-            hbox_factory(self.pause_play_button, self.reset_inputs_button),
-            hbox_factory(self.fps_counter, self.frameless_checkbox, self.on_top_checkbox)
-        )
-
-        self.main_layout.addLayout(model_interaction_box)
-        self.main_layout.addLayout(gui_meta_box)
 
         # Pause/play with P.
         #   Spacebar is more obvious, but it makes tabbed navigation not work
@@ -120,10 +99,6 @@ class MainWindow(BaseGUIWindow):
         self.input_time.connect(self.update_server)
 
         QTimer.singleShot(0, lambda: self.setFixedSize(self.minimumSizeHint()))
-    
-    def reset_inputs(self):
-        for w in self.input_widgets:
-            w.reset_device()
 
     @Slot(object)
     def set_output_state(self, new_output_state: OutputDict):
@@ -159,14 +134,6 @@ class MainWindow(BaseGUIWindow):
         self.close()
         app.exit()
 
-    def update_fps(self):
-        new_time = time.perf_counter()
-        self.last_few_fps.append(1/(new_time - self.last_time))
-        if len(self.last_few_fps) == 10:
-            self.fps_counter.setText(f"<code>{mean(self.last_few_fps):.2f}/60</code> FPS")
-            self.last_few_fps.clear()
-        self.last_time = new_time
-
 
     def update_server(self):
         if not self.paused:
@@ -179,18 +146,6 @@ class MainWindow(BaseGUIWindow):
 
     def update_latest(self, new_latest: InputDict):
         self.latest.update(new_latest)
-
-    def pause_play(self):
-        self.paused = not self.paused
-        if self.paused:
-            self.pause_play_button.setText("Play")
-            self.fps_counter.setText(f"<em><code>&nbsp;PAUSED&nbsp;</code></em> FPS")
-            self.last_few_fps.clear() # While paused, times are meaningless
-        else:
-            self.pause_play_button.setText("Pause")
-            self.last_few_fps.clear()
-            self.last_time = time.perf_counter()
-            self.input_time.emit()
 
 
 def run_app(program_name: str, sock: socket.socket, listener_done: threading.Event, have_quit: threading.Event):

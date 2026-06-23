@@ -3,10 +3,21 @@ import socket
 import textwrap
 import threading
 import time
+from statistics import mean
+from typing import Final
 
 from colorama import Fore, Style
-from gui__widgets import EmptyWindow
+from gui__widgets import (
+    EmptyWindow,
+    InputWidget,
+    hbox_factory,
+    make_action,
+    make_button,
+    make_checkbox,
+    vbox_factory,
+)
 from PySide6.QtCore import QDeadlineTimer, QThread, QTimer, Signal
+from PySide6.QtWidgets import QApplication, QLabel
 from shared__util import big_receive
 
 
@@ -35,7 +46,70 @@ class BaseGUIWindow(EmptyWindow):
         #   constructor, so the signals aren't connected yet
         QTimer.singleShot(0, self.listen_thread.start)
 
+        self.input_widgets: list[InputWidget] = []
 
+
+        self.last_few_fps: list[float] = []
+        self.last_time = time.perf_counter()
+        self.fps_counter = QLabel("__.__/60 FPS")
+
+
+        self.pause_play_button = make_button("Pause simulation", self.pause_play, tooltip="Shortcut: P")
+        self.reset_inputs_button = make_button("Reset inputs", self.reset_inputs, tooltip="Shortcut: R")
+
+
+        self.frameless_checkbox = make_checkbox("Frameless", self.set_frameless)
+
+        self.on_top_checkbox = make_checkbox("Always on top", self.set_on_top, checked=True)
+
+        # reset, pause, window settings, and FPS counters are grouped here
+        self.gui_meta_box = vbox_factory(
+            hbox_factory(self.pause_play_button, self.reset_inputs_button),
+            hbox_factory(self.fps_counter, self.frameless_checkbox, self.on_top_checkbox)
+        )
+
+        # subclasses put all their widgets in here 
+        # Final so type checker prevents shadowing rather than adding
+        self.model_interaction_box: Final = vbox_factory()
+
+        self.main_layout.addLayout(self.model_interaction_box)
+        self.main_layout.addLayout(self.gui_meta_box)
+
+        # Pause/play with P.
+        #   Spacebar is more obvious, but it makes tabbed navigation not work
+        self.addAction(make_action("Pause/play", self.pause_play_button.click, "P", self))
+        
+        # Reset inputs with R
+        self.addAction(make_action("Reset inputs", self.reset_inputs_button.click, "R", self))
+
+        # Allow quitting with ctrl+W/cmd+W
+        self.addAction(make_action("Quit simulation", QApplication.quit, "Ctrl+W", self))
+
+    def reset_inputs(self):
+        for w in self.input_widgets:
+            w.reset_device()
+
+    
+    def pause_play(self):
+        self.paused = not self.paused
+        if self.paused:
+            self.pause_play_button.setText("Play")
+            self.fps_counter.setText(f"<em><code>&nbsp;PAUSED&nbsp;</code></em> FPS")
+            self.last_few_fps.clear() # While paused, times are meaningless
+        else:
+            self.pause_play_button.setText("Pause")
+            self.last_few_fps.clear()
+            self.last_time = time.perf_counter()
+            self.input_time.emit()
+
+    
+    def update_fps(self):
+        new_time = time.perf_counter()
+        self.last_few_fps.append(1/(new_time - self.last_time))
+        if len(self.last_few_fps) == 10:
+            self.fps_counter.setText(f"<code>{mean(self.last_few_fps):.2f}/60</code> FPS")
+            self.last_few_fps.clear()
+        self.last_time = new_time
 
 class ListenThread(QThread):
     def __init__(self, window: BaseGUIWindow, listener_done: threading.Event, have_quit: threading.Event):
