@@ -2,21 +2,19 @@
 Launched as subprocess from client__shell.py
 '''
 
-import ast
 import base64
 import socket
 import sys
-import textwrap
 import threading
 import time
 from statistics import mean
 from typing import TypedDict
 
 from colorama import Fore, Style
+from gui__base import BaseGUIWindow
 from gui__util import reconstruct_socket_unix, reconstruct_socket_windows
 from gui__widgets import (
     BoardComponents,
-    EmptyWindow,
     InputWidget,
     hbox_factory,
     int_to_bool_list,
@@ -49,18 +47,9 @@ class InputDict(TypedDict, total=False):
     CB: int
     switches: int
 
-def deserialize_dict(d: str) -> dict:
-    return ast.literal_eval(d)
-
-class MainWindow(EmptyWindow):
-    input_changed = Signal(InputDict)
-    output_changed = Signal(OutputDict)
-    input_time = Signal()
-    pinged = Signal()
-    close_signal = Signal()
+class MainWindow(BaseGUIWindow):
     def __init__(self, sock: socket.socket, listener_done: threading.Event, have_quit: threading.Event):
-        super().__init__("FPGA board view")
-        self.sock = sock
+        super().__init__("Classic Devkit", sock, listener_done, have_quit)
 
         self.output_state = OutputDict(lights=0, DP=0b1, anode=0b1111, segment=0b111_111)
         self.input_state = InputDict(UB=0, DB=0, LB=0, RB=0, CB=0, switches=0)
@@ -129,10 +118,6 @@ class MainWindow(EmptyWindow):
 
         self.pinged.connect(self.update_fps)
         self.input_time.connect(self.update_server)
-
-        # important: put thread under self or gc destroys it immediately
-        self.t = ListenThread(self, listener_done, have_quit)
-        self.t.start()
 
         QTimer.singleShot(0, lambda: self.setFixedSize(self.minimumSizeHint()))
     
@@ -208,47 +193,6 @@ class MainWindow(EmptyWindow):
             self.input_time.emit()
 
 
-class ListenThread(QThread):
-    
-    def __init__(self, window: MainWindow, listener_done: threading.Event, have_quit: threading.Event):
-        super().__init__()
-        self.window = window
-
-        self.listener_done = listener_done
-        self.have_quit = have_quit
-
-    def run(self):
-        window = self.window
-        sock = window.sock
-
-        # Timer with support for nanosecond precision
-        our_timer = QDeadlineTimer()
-
-        while True:
-            our_timer.setPreciseRemainingTime(0, nsecs=round(1_000_000_000/60))
-            window.input_time.emit()
-            # response is either exit or a (maybe empty) list of lines printed by the Verilog program
-            response = big_receive(sock).decode()
-            window.pinged.emit() # update FPS after receiving
-
-            if response == "exit":
-                self.listener_done.set()
-                break
-            else:
-                verilog_prints = ast.literal_eval(response)
-                if len(verilog_prints) > 0:
-                    message = "\n".join([textwrap.indent(s, " " * 4) for s in verilog_prints])
-                    print(f"{Fore.BLUE}{Style.BRIGHT}{message}{Style.RESET_ALL}")
-
-                # get the output dict expected after the Verilog list
-                output_state: OutputDict = deserialize_dict(big_receive(sock).decode()) # pyright: ignore[reportAssignmentType]
-                if not self.have_quit.is_set(): # make sure to not do Qt stuff if app has quit. (Not sure if necessary)
-                    window.output_changed.emit(output_state)
-
-            while not our_timer.hasExpired():
-                time.sleep(.0001)
-
-
 def run_app(sock: socket.socket, listener_done: threading.Event, have_quit: threading.Event):
     app = make_app()
     window = MainWindow(sock, listener_done, have_quit)
@@ -268,6 +212,7 @@ if __name__ == "__main__":
         socket_share_data = base64.b64decode(sys.stdin.buffer.read())
         sock = reconstruct_socket_windows(socket_share_data)
 
+    # TODO: pass program name in?
     run_app(sock, listener_done, have_quit)
 
     # app has been quit. tell server we are quitting then wait for
