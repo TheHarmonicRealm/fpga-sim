@@ -133,6 +133,10 @@ def build_live_sim(input_files: list[NamedFile], folder_name: str):
 def start_live_sim(simulator_name: str, simulator_filename: str):
     global app, compiled_program
 
+    if compiled_program is None:
+        print(f"{Fore.RED}No program has been built yet!{Style.RESET_ALL}")
+        return
+
     command = StartLiveCommand()
     send_command(command)
 
@@ -143,12 +147,12 @@ def start_live_sim(simulator_name: str, simulator_filename: str):
             print(f"{Fore.RED}{content}{Style.RESET_ALL}")
         case AckMessage():
             print(f"Server started simulation of program {Fore.CYAN}{Style.BRIGHT}./verilog/live_sim/{compiled_program}/top.v{Style.RESET_ALL}. Launching simulator \"{simulator_name}\" now.")
-            # Run gui in a subprocess (fork) and give it the socket we already have
             print(f"Prints from the Verilog model will be indented and {Fore.BLUE}{Style.BRIGHT}bold blue{Style.RESET_ALL}!")
+            # Run gui in a subprocess (fork) and give it the socket we already have
             if sys.platform != 'win32':
-                subprocess.run(f"uv run ./python/{simulator_filename} {sock.fileno()}", shell=True, close_fds=False)
+                subprocess.run(["uv", "run", f"./python/{simulator_filename}", compiled_program, f"{sock.fileno()}"], close_fds=False)
             else: # Windows requires fancy code; must use Popen because child must receive input after its creation
-                live_sim_process = subprocess.Popen(f"uv run ./python/{simulator_filename}", stdin=subprocess.PIPE, shell=True, close_fds=False)
+                live_sim_process = subprocess.Popen(["uv", "run", f"./python/{simulator_filename}", compiled_program], stdin=subprocess.PIPE, close_fds=False)
                 child_pipe: IO[bytes] = live_sim_process.stdin # pyright: ignore[reportAssignmentType]
                 shareable_socket = sock.share(live_sim_process.pid)
                 child_pipe.write(base64.b64encode(shareable_socket))

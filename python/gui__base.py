@@ -27,12 +27,13 @@ class BaseGUIWindow(EmptyWindow):
     def __init__(self, title: str, sock: socket.socket, listener_done: threading.Event, have_quit: threading.Event):
         super().__init__(title)
         self.sock = sock
+
         # important: put thread under self or gc destroys it immediately
-        self.t = ListenThread(self, listener_done, have_quit)
-        # directly doing this in parent init, which runs before child of course,
-        #   does not work because the signals aren't attached to slots by the
-        #   time the loop starts and emits them; singleshot delay fixes this
-        QTimer.singleShot(0, self.t.start)
+        self.listen_thread = ListenThread(self, listener_done, have_quit)
+
+        # must be behind singleshot delay because this runs before child
+        #   constructor, so the signals aren't connected yet
+        QTimer.singleShot(0, self.listen_thread.start)
 
 
 

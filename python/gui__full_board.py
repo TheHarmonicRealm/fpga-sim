@@ -48,8 +48,8 @@ class InputDict(TypedDict, total=False):
     switches: int
 
 class MainWindow(BaseGUIWindow):
-    def __init__(self, sock: socket.socket, listener_done: threading.Event, have_quit: threading.Event):
-        super().__init__("Classic Devkit", sock, listener_done, have_quit)
+    def __init__(self, program_name: str, sock: socket.socket, listener_done: threading.Event, have_quit: threading.Event):
+        super().__init__(f"\"{program_name}\" running on classic devkit", sock, listener_done, have_quit)
 
         self.output_state = OutputDict(lights=0, DP=0b1, anode=0b1111, segment=0b111_111)
         self.input_state = InputDict(UB=0, DB=0, LB=0, RB=0, CB=0, switches=0)
@@ -193,9 +193,9 @@ class MainWindow(BaseGUIWindow):
             self.input_time.emit()
 
 
-def run_app(sock: socket.socket, listener_done: threading.Event, have_quit: threading.Event):
+def run_app(program_name: str, sock: socket.socket, listener_done: threading.Event, have_quit: threading.Event):
     app = make_app()
-    window = MainWindow(sock, listener_done, have_quit)
+    window = MainWindow(program_name, sock, listener_done, have_quit)
     # pin to top at start (ignored on Wayland)
     window.set_on_top(True)
     app.exec()
@@ -207,13 +207,14 @@ if __name__ == "__main__":
 
     if sys.platform != 'win32':
         # reconstruct socket from regular file descriptor
-        sock = reconstruct_socket_unix(int(sys.argv[1]))
+        sock = reconstruct_socket_unix(int(sys.argv[2]))
     else: # make socket from received output of socket.share()
         socket_share_data = base64.b64decode(sys.stdin.buffer.read())
         sock = reconstruct_socket_windows(socket_share_data)
 
-    # TODO: pass program name in?
-    run_app(sock, listener_done, have_quit)
+    program_name = sys.argv[1]
+
+    run_app(program_name, sock, listener_done, have_quit)
 
     # app has been quit. tell server we are quitting then wait for
     #   listener to get ACK back. Necessary to have a "clean" socket on exit
