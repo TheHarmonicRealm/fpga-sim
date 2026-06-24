@@ -117,15 +117,8 @@ def build_live_sim(input_files: list[NamedFile], folder_name: str):
     t2 = time.time()
     match result:
         case ErrorMessage(content):
-            if has_template_mismatch_error(content):
-                print(f"{error_title()} Your top module's inputs and outputs do not"
-                      " seem to match the required form."
-                      " See verilog/live_sim/ex_live/top.v for a"
-                      f" template/example!{Style.RESET_ALL}")
-                # TODO: update once more boards supported
-            else:
-                print("Server returned error message:")
-                print(colorize(content, f"verilog/live_sim/{folder_name}"))
+            print("Server returned error message:")
+            print(colorize(content, f"verilog/live_sim/{folder_name}"))
         case AckMessage():
             print(f"{success_title()} Built live simulation in {round((t2 - t1), 3)}s. Run with start_live_sim.")
             compiled_program = folder_name
@@ -284,11 +277,6 @@ def colorize(err: str, folder: str | None = None):
     # color the line markers and the subsequent number-less pipe lines
     err = re.sub(r"(?P<front1>(\d| )*\|)(?P<content>.*)\n(?P<front2>(\d| )*\|)(?P<content2>.*)", f"{Fore.YELLOW}{r"\g<front1>"}{Style.RESET_ALL}{r"\g<content>"}\n{Fore.YELLOW}{r"\g<front2>"}{Style.RESET_ALL}{Style.BRIGHT}{Fore.RED}{r"\g<content2>"}{Style.RESET_ALL}", err)
     return err.rstrip()
-
-def has_template_mismatch_error(err: str):
-    # can't just use `‘class Vtop’ has no member named in string` due to
-    #   ANSI color codes
-    return bool(re.search(r"Vtop[^$]* has no member named", err, flags=re.MULTILINE))
 
 class ContinueException(Exception):
     pass
