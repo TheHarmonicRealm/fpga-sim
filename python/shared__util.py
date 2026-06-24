@@ -5,6 +5,7 @@ import ast
 import dataclasses as dc
 import os
 import socket
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import (

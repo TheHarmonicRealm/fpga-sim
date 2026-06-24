@@ -188,6 +188,8 @@ def build_live(sock: socket.socket, files: list[NamedFile]):
     result = try_make(files)
     sock.send(result.CODE.encode())
     send_message(serialize_dataclass(result), sock)
+    if isinstance(result, AckMessage):
+        send_message(Path("ports.txt").read_text(), sock)
 
 if __name__ == "__main__":
     i_am_a_docker = "FPGA_DOCKER_SERVER" in environ

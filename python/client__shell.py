@@ -1,3 +1,4 @@
+import ast
 import base64
 import os
 import re
@@ -106,8 +107,50 @@ def waveform_sim(input_files: list[NamedFile], output_path: Path, folder_name: s
                 case None:
                     print(result_start, f"Saved output to {Style.BRIGHT}{Fore.CYAN}{clickable_filepath(output_path, 2)}{Style.RESET_ALL}")
 
+def verify_ports(candidate_input: dict[str, int], candidate_output: dict[str, int], canonical_input: dict[str, int], canonical_output: dict[str, int]):
+    def format_port(port: str, desired: bool = False):
+        return f"\"{Fore.CYAN if desired else Fore.RED}{port}{Style.RESET_ALL}\""
+
+    errors_list = []
+    for port, width in candidate_input.items():
+        if not port in canonical_input:
+            errors_list.append(f"Unexpected input port {format_port(port)} was encountered")
+        elif width != (expected := canonical_input[port]):
+            errors_list.append(f"Input port {format_port(port, True)} has width {width}; should be {expected}")
+    for port, width in candidate_output.items():
+        if not port in canonical_output:
+            errors_list.append(f"Unexpected output port {format_port(port)} was encountered")
+        elif width != (expected := canonical_output[port]):
+            errors_list.append(f"Output port {format_port(port, True)} has width {width}; should be {expected}")
+
+    for port in canonical_input:
+        if port not in candidate_input:
+            if (p_l := port.lower()) in candidate_input:
+                errors_list.append(f"Missing input port {format_port(port, True)}.\n    Suggestion: rename {format_port(p_l)} -> {format_port(port, True)}?")
+            elif (p_u := port.upper()) in candidate_input:
+                errors_list.append(f"Missing input port {format_port(port, True)}.\n    Suggestion: rename {format_port(p_u)} -> {format_port(port, True)}?")
+            else:
+                errors_list.append(f"Missing input port {format_port(port, True)}.")
+    for port in canonical_output:
+        if port not in candidate_output:
+            if (p_l := port.lower()) in candidate_output:
+                errors_list.append(f"Missing output port {format_port(port, True)}.\n    Suggestion: rename {format_port(p_l)} -> {format_port(port, True)}?")
+            elif (p_u := port.upper()) in candidate_output:
+                errors_list.append(f"Missing output port {format_port(port, True)}.\n    Suggestion: rename {format_port(p_u)} -> {format_port(port, True)}?")
+            else:
+                errors_list.append(f"Missing output port {format_port(port, True)}.")
+
+    if (l := len(errors_list)) > 0:
+        print(f"{Fore.RED}{Style.BRIGHT}Error:{Style.RESET_ALL} design {Fore.CYAN}{Style.BRIGHT}./verilog/live_sim/{compiled_program}/top.v{Style.RESET_ALL} had {l} input/output port error{"s" if l > 1 else ""}:")
+        for e in errors_list:
+            print(f"* {e}")
+        return False
+    else:
+        return True
+
+
 def build_live_sim(input_files: list[NamedFile], folder_name: str):
-    global sock, compiled_program
+    global sock, compiled_program, compiled_input_ports, compiled_output_ports
 
     command = BuildLiveCommand(input_files)
     t1 = time.time()
@@ -123,13 +166,34 @@ def build_live_sim(input_files: list[NamedFile], folder_name: str):
             print(f"{success_title()} Built live simulation in {round((t2 - t1), 3)}s. Run with start_live_sim.")
             compiled_program = folder_name
 
-def start_live_sim(simulator_name: str, simulator_filename: str):
-    global app, compiled_program
+            ports_str = big_receive(sock).decode()
+            # receive tuple of two port info dict strings; eval and unpack
+            ports: tuple[dict[str, int], dict[str, int]] = ast.literal_eval(ports_str)
+            compiled_input_ports, compiled_output_ports = ports
 
-    if compiled_program is None:
+            # TODO: at COMPILATION time take in sim name rather than at
+            #   launch time? Either:
+            #   * as an argument to build_live_sim
+            #       * don't want to type two things in but
+            #   * or have the user put the sim name in the folder/a comment in
+            #      top.v?
+            # Either would be better than not giving an error until runtime
+
+            # related TODO: cache the previous build somehow so if the new one
+            #   is bad that one is not lost? old system would not overrwrite
+            #   the executable until successfully compiled, but this one
+            #   compiles before the (new type of) error occurs so the previous
+            #   EXE is lost
+
+def start_live_sim(simulator_name: str, simulator_filename: str):
+
+    if compiled_program is None or compiled_input_ports is None or compiled_output_ports is None:
         print(f"{Fore.RED}No program has been built yet!{Style.RESET_ALL}")
         return
 
+    if not verify_ports(compiled_input_ports, compiled_output_ports, *simulator_ports[simulator_name]):
+        return
+    
     command = StartLiveCommand()
     send_command(command)
 
@@ -563,9 +627,14 @@ if __name__ == "__main__":
         # apply keybindings. gets full functionality with small compromise!
         # sesh = PromptSession("> ", completer=main_command_completer(), key_bindings=kb, bottom_toolbar=toolbar)
 
+        # TODO: store in a more user-serviceable way one day
+        # or at least just store better, this is very temporary
         simulators_map = {
-            "classic": "gui__full_board.py",
-            "one_number": "gui__switch_lights.py",
+            "classic": "gui__full_board.py"
+        }
+        
+        simulator_ports = {
+            "classic": ({'clk': 1, 'UB': 1, 'DB': 1, 'LB': 1, 'RB': 1, 'CB': 1, 'switches': 16}, {'segment': 7, 'DP': 1, 'anode': 4, 'lights': 16})
         }
 
         # call this to have experience like old one on Mac/Linux.
@@ -578,6 +647,8 @@ if __name__ == "__main__":
         # TODO: use this to warn users on running if the program seems to
         # have been modified since last compilation
         compiled_program: str | None = None
+        compiled_input_ports: dict[str, int] | None = None
+        compiled_output_ports: dict[str, int] | None = None
 
         while True:
             try:

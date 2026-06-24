@@ -69,3 +69,5 @@ generated_content = sim_template.safe_substitute(
     )
 
 Path("simulator_driver_generated.cpp").write_text(generated_content)
+# also write output to file in Python format for server__manager.py to get
+Path("ports.txt").write_text(f"{repr((input_dict, output_dict))}")
