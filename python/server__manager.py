@@ -1,5 +1,4 @@
 import ast
-import dataclasses as dc
 import shutil
 import socket
 import subprocess
@@ -9,6 +8,7 @@ from pathlib import Path
 from string import Template
 from typing import IO
 
+import extract_ports
 from shared__util import (
     AckMessage,
     BadHeader,
@@ -38,6 +38,7 @@ def deserialize_dict(d: str) -> msg_dict:
     return ast.literal_eval(d)
 
 executable_path = Path("./obj_dir/Vtop")
+backup_executable_path = Path("./executable_backup")
 
 def live_sim(sock: socket.socket):
     global executable_path
@@ -99,37 +100,44 @@ def live_sim(sock: socket.socket):
         send_message(system_update_string, sock)
     # TODO: properly close process. Writing "exit\n" and calling process.wait() hangs forever...
 
-def try_make(files: list[NamedFile]):
-    '''Runs make with the given list of NamedFiles, saving them to
-    a folder first. Assumes that the client has checked that there is one
-    called top.v.'''
+def verify_ports(candidate_input: dict[str, int], candidate_output: dict[str, int], canonical_input: dict[str, int], canonical_output: dict[str, int]):
+    def format_port(port: str, desired: bool = False):
+        return f"\"{"<ansicyan>" if desired else "<ansired>"}{port}{"</ansicyan>" if desired else "</ansired>"}\""
 
-    names = [file.name for file in files]
-    try:
-        names.remove("top.v")
-    except ValueError:
-        return ErrorMessage(f"Lacking a top.v. Client should have caught this.")
-    names.insert(0, "top.v") # put at front to indicate top to Verilator
+    errors_list = []
+    for port, width in candidate_input.items():
+        if not port in canonical_input:
+            errors_list.append(f"Unexpected input port {format_port(port)} was encountered")
+        elif width != (expected := canonical_input[port]):
+            errors_list.append(f"Input port {format_port(port, True)} has width {width}; should be {expected}")
+    for port, width in candidate_output.items():
+        if not port in canonical_output:
+            errors_list.append(f"Unexpected output port {format_port(port)} was encountered")
+        elif width != (expected := canonical_output[port]):
+            errors_list.append(f"Output port {format_port(port, True)} has width {width}; should be {expected}")
 
-    for file in files:
-        file.to_disk(Path("./user_inputs"))
+    for port in canonical_input:
+        if port not in candidate_input:
+            if (p_l := port.lower()) in candidate_input:
+                errors_list.append(f"Missing input port {format_port(port, True)}.\n    Suggestion: rename {format_port(p_l)} -> {format_port(port, True)}?")
+            elif (p_u := port.upper()) in candidate_input:
+                errors_list.append(f"Missing input port {format_port(port, True)}.\n    Suggestion: rename {format_port(p_u)} -> {format_port(port, True)}?")
+            else:
+                errors_list.append(f"Missing input port {format_port(port, True)}.")
+    for port in canonical_output:
+        if port not in candidate_output:
+            if (p_l := port.lower()) in candidate_output:
+                errors_list.append(f"Missing output port {format_port(port, True)}.\n    Suggestion: rename {format_port(p_l)} -> {format_port(port, True)}?")
+            elif (p_u := port.upper()) in candidate_output:
+                errors_list.append(f"Missing output port {format_port(port, True)}.\n    Suggestion: rename {format_port(p_u)} -> {format_port(port, True)}?")
+            else:
+                errors_list.append(f"Missing output port {format_port(port, True)}.")
 
-    # List is passed in as an environment variable
-    # Server passes -I./user_inputs so it can find these files by name
-    filenames_str = " ".join(names)
-    envvars = environ.copy() | {"COMPILE_FILES": filenames_str, "CXXFLAGS": "-fdiagnostics-color"}
+    if (l := len(errors_list)) > 0:
+        return ErrorMessage(f"<ansired><b>Error:</b></ansired> your design had {l} input/output port error{"s" if l > 1 else ""}:\n • {"\n • ".join(errors_list)}")
+    else:
+        return AckMessage()
 
-    # This and the CXXFLAGS make it so that errors' colors are preserved; the
-    #   commands otherwise know they are not in a terminal and strip them
-    #   Not sure why the env var is also needed (in real terminal it isn't)
-    proc = subprocess.run(["make"], stderr=subprocess.PIPE, env=envvars)
-
-    match proc.returncode:
-        case 0:
-            return AckMessage()
-        case other:
-            return ErrorMessage(f"\n\n{proc.stderr.decode()}")
-        
 def try_waveform_run(name: str, files: list[NamedFile]):
     names = [file.name for file in files]
     try:
@@ -184,12 +192,67 @@ def waveform_sim(sock: socket.socket, name: str, files: list[NamedFile]):
             send_message(serialize_dataclass(output_file), sock) # pyright: ignore[reportArgumentType]
 
 
-def build_live(sock: socket.socket, files: list[NamedFile]):
-    result = try_make(files)
-    sock.send(result.CODE.encode())
-    send_message(serialize_dataclass(result), sock)
-    if isinstance(result, AckMessage):
-        send_message(Path("ports.txt").read_text(), sock)
+def build_live(sock: socket.socket, files: list[NamedFile], expected_inputs: dict[str, int], expected_outputs: dict[str, int]):
+    # Tries to make Verilog header. If it works, checks ports.
+    # Only if that works does it compile — therefore the executable is not
+    # overwritten with one for a correct but unusable program
+
+    names = [file.name for file in files]
+    try:
+        names.remove("top.v")
+    except ValueError:
+        return ErrorMessage(f"Lacking a top.v. Client should have caught this.")
+    names.insert(0, "top.v") # put at front to indicate top to Verilator
+
+    for file in files:
+        file.to_disk(Path("./user_inputs"))
+
+    # List is passed in as an environment variable
+    # Server passes -I./user_inputs so it can find these files by name
+    filenames_str = " ".join(names)
+    envvars = environ.copy() | {"COMPILE_FILES": filenames_str, "CXXFLAGS": "-fdiagnostics-color"}
+
+    proc = subprocess.run(["make", "generate_code"], stderr=subprocess.PIPE, env=envvars)
+
+    match proc.returncode:
+        case 0:
+            # continue to generating exe
+            sock.send(AckMessage().CODE.encode())
+            send_message(serialize_dataclass(AckMessage()), sock)
+        case _:
+            e = ErrorMessage(f"\n\n{proc.stderr.decode()}")
+            sock.send(e.CODE.encode())
+            send_message(serialize_dataclass(e), sock)
+            return False
+        
+    input_ports, output_ports = extract_ports.ports_dicts(Path("./obj_dir/Vtop.h"))
+
+    check = verify_ports(input_ports, output_ports, expected_inputs, expected_outputs)
+
+    match check:
+
+        case AckMessage():
+            sock.send(AckMessage().CODE.encode())
+            send_message(serialize_dataclass(AckMessage()), sock)
+        case ErrorMessage(_):
+            sock.send(check.CODE.encode())
+            send_message(serialize_dataclass(check), sock)
+            return False
+        
+    extract_ports.write_driver(Path("./simulator_driver_template.cpp"), Path("./simulator_driver_generated.cpp"), input_ports, output_ports)
+
+    proc = subprocess.run(["make", "finish_build"], stderr=subprocess.PIPE, env=envvars)
+
+    match proc.returncode:
+        case 0:
+            sock.send(AckMessage().CODE.encode())
+            send_message(serialize_dataclass(AckMessage()), sock)
+            return True
+        case _:
+            e = ErrorMessage(f"\n\n{proc.stderr.decode()}")
+            sock.send(e.CODE.encode())
+            send_message(serialize_dataclass(e), sock)
+            return False
 
 if __name__ == "__main__":
     i_am_a_docker = "FPGA_DOCKER_SERVER" in environ
@@ -246,12 +309,9 @@ if __name__ == "__main__":
             # print(command)
 
             match command:
-                case BuildLiveCommand(files):
-                    build_live(conn, files)
-                    pass
+                case BuildLiveCommand(files, expected_inputs, expected_outputs):
+                    build_live(conn, files, expected_inputs, expected_outputs)
                 case StartLiveCommand():
                     live_sim(conn)
-                    pass
                 case WaveformSimCommand(name, files):
                     waveform_sim(conn, name, files)
-                    pass

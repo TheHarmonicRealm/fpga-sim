@@ -66,9 +66,8 @@ VERILATOR_FLAGS += --build
 executable_line := $(VERILATOR) $(VERILATOR_FLAGS) $(VERILATOR_INPUT)
 
 ######################################################################
-default: build
 
-build:
+generate_code:
 	@echo
 	@echo "-- Verilator live sim build"
 	@echo
@@ -77,7 +76,8 @@ build:
 	@echo "-- VERILATE ----------------"
 	$(verilate_line)
 	@echo "-- GENERATE_DRIVER_CODE ----------------"
-	uv run ./extract_ports.py
+
+finish_build:
 	@echo "-- FINISH_VERILATION ----------------"
 	$(executable_line)
 

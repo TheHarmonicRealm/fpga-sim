@@ -97,6 +97,8 @@ class NamedFile:
 @dataclass
 class BuildLiveCommand:
     files: list[NamedFile]
+    expected_inputs: dict[str, int]
+    expected_outputs: dict[str, int]
 
     CODE: ClassVar[str] = "BL"
 

@@ -1,4 +1,3 @@
-import ast
 import base64
 import os
 import re
@@ -107,69 +106,52 @@ def waveform_sim(input_files: list[NamedFile], output_path: Path, folder_name: s
                 case None:
                     print(result_start, f"Saved output to {Style.BRIGHT}{Fore.CYAN}{clickable_filepath(output_path, 2)}{Style.RESET_ALL}")
 
-def verify_ports(candidate_input: dict[str, int], candidate_output: dict[str, int], canonical_input: dict[str, int], canonical_output: dict[str, int]):
-    def format_port(port: str, desired: bool = False):
-        return f"\"{Fore.CYAN if desired else Fore.RED}{port}{Style.RESET_ALL}\""
 
-    errors_list = []
-    for port, width in candidate_input.items():
-        if not port in canonical_input:
-            errors_list.append(f"Unexpected input port {format_port(port)} was encountered")
-        elif width != (expected := canonical_input[port]):
-            errors_list.append(f"Input port {format_port(port, True)} has width {width}; should be {expected}")
-    for port, width in candidate_output.items():
-        if not port in canonical_output:
-            errors_list.append(f"Unexpected output port {format_port(port)} was encountered")
-        elif width != (expected := canonical_output[port]):
-            errors_list.append(f"Output port {format_port(port, True)} has width {width}; should be {expected}")
+def build_live_sim(input_files: list[NamedFile], folder_name: str, mode: str):
+    global sock, compiled_program, current_sim
 
-    for port in canonical_input:
-        if port not in candidate_input:
-            if (p_l := port.lower()) in candidate_input:
-                errors_list.append(f"Missing input port {format_port(port, True)}.\n    Suggestion: rename {format_port(p_l)} -> {format_port(port, True)}?")
-            elif (p_u := port.upper()) in candidate_input:
-                errors_list.append(f"Missing input port {format_port(port, True)}.\n    Suggestion: rename {format_port(p_u)} -> {format_port(port, True)}?")
-            else:
-                errors_list.append(f"Missing input port {format_port(port, True)}.")
-    for port in canonical_output:
-        if port not in candidate_output:
-            if (p_l := port.lower()) in candidate_output:
-                errors_list.append(f"Missing output port {format_port(port, True)}.\n    Suggestion: rename {format_port(p_l)} -> {format_port(port, True)}?")
-            elif (p_u := port.upper()) in candidate_output:
-                errors_list.append(f"Missing output port {format_port(port, True)}.\n    Suggestion: rename {format_port(p_u)} -> {format_port(port, True)}?")
-            else:
-                errors_list.append(f"Missing output port {format_port(port, True)}.")
-
-    if (l := len(errors_list)) > 0:
-        print(f"{Fore.RED}{Style.BRIGHT}Error:{Style.RESET_ALL} design {Fore.CYAN}{Style.BRIGHT}./verilog/live_sim/{compiled_program}/top.v{Style.RESET_ALL} had {l} input/output port error{"s" if l > 1 else ""}:")
-        for e in errors_list:
-            print(f"* {e}")
-        return False
-    else:
-        return True
-
-
-def build_live_sim(input_files: list[NamedFile], folder_name: str):
-    global sock, compiled_program, compiled_input_ports, compiled_output_ports
-
-    command = BuildLiveCommand(input_files)
+    command = BuildLiveCommand(input_files, *simulator_ports[mode])
     t1 = time.time()
     send_command(command)
+
+    # header generation
+    result = receive_error_or_ack(sock)
+    match result:
+        case ErrorMessage(content):
+            print("Server returned error message on header generation:")
+            print(colorize(content, f"verilog/live_sim/{folder_name}"))
+            return False
+        case AckMessage():
+            pass
+
+    # port checking
+    # all done on server to avoid complex back-and-forth code, while still
+    # being able prevention of
+    result = receive_error_or_ack(sock)
+    match result:
+        case ErrorMessage(content):
+            # server's message uses HTML and has us format with PPT so server
+            #   doesn't need to install any libraries on its own. And avoids
+            #   moving raw color codes cross-OS.
+            # TODO: could be better to send down "error dicts"?
+            #   like the list of missing ports, extra-ones, and mis-sized ones
+            #   and then the client compiles them into messages rather than
+            #   doing it past the Docker boundary
+            print_formatted_text(HTML(content))
+            return False
+        case AckMessage():
+            pass
 
     result = receive_error_or_ack(sock)
     t2 = time.time()
     match result:
         case ErrorMessage(content):
-            print("Server returned error message:")
+            print("Server returned error message on final build:")
             print(colorize(content, f"verilog/live_sim/{folder_name}"))
         case AckMessage():
             print(f"{success_title()} Built live simulation in {round((t2 - t1), 3)}s. Run with start_live_sim.")
             compiled_program = folder_name
-
-            ports_str = big_receive(sock).decode()
-            # receive tuple of two port info dict strings; eval and unpack
-            ports: tuple[dict[str, int], dict[str, int]] = ast.literal_eval(ports_str)
-            compiled_input_ports, compiled_output_ports = ports
+            current_sim = mode
 
             # TODO: at COMPILATION time take in sim name rather than at
             #   launch time? Either:
@@ -185,13 +167,9 @@ def build_live_sim(input_files: list[NamedFile], folder_name: str):
             #   compiles before the (new type of) error occurs so the previous
             #   EXE is lost
 
-def start_live_sim(simulator_name: str, simulator_filename: str):
-
-    if compiled_program is None or compiled_input_ports is None or compiled_output_ports is None:
-        print(f"{Fore.RED}No program has been built yet!{Style.RESET_ALL}")
-        return
-
-    if not verify_ports(compiled_input_ports, compiled_output_ports, *simulator_ports[simulator_name]):
+def start_live_sim():
+    if compiled_program is None or current_sim is None:
+        # fixes type checker but not reachable (outer code checks)
         return
     
     command = StartLiveCommand()
@@ -203,11 +181,11 @@ def start_live_sim(simulator_name: str, simulator_filename: str):
         case ErrorMessage(content): # known to be plain text hardcoded message
             print(f"{Fore.RED}{content}{Style.RESET_ALL}")
         case AckMessage():
-            print(f"Server started simulation of program {Fore.CYAN}{Style.BRIGHT}./verilog/live_sim/{compiled_program}/top.v{Style.RESET_ALL}. Launching simulator \"{simulator_name}\" now.")
+            print(f"Server started simulation of program {Fore.CYAN}{Style.BRIGHT}./verilog/live_sim/{compiled_program}/top.v{Style.RESET_ALL}. Launching simulator \"{current_sim}\" now.")
             print(f"Prints from the Verilog model will be indented and {Fore.BLUE}{Style.BRIGHT}bold blue{Style.RESET_ALL}!")
             # Run gui in a subprocess (fork) and give it the socket we already have
             if sys.platform != 'win32':
-                subprocess.run(["uv", "run", f"./python/{simulator_filename}", compiled_program, f"{sock.fileno()}"], close_fds=False)
+                subprocess.run(["uv", "run", f"./python/{simulators_map[current_sim]}", compiled_program, f"{sock.fileno()}"], close_fds=False)
             else: # Windows requires fancy code; must use Popen because child must receive input after its creation
                 live_sim_process = subprocess.Popen(["uv", "run", f"./python/{simulator_filename}", compiled_program], stdin=subprocess.PIPE, close_fds=False)
                 child_pipe: IO[bytes] = live_sim_process.stdin # pyright: ignore[reportAssignmentType]
@@ -272,6 +250,8 @@ class BuildLiveSimCompleter(Completer):
 
         if args_length == 0:
             yield from FolderNameCompleter(live_sim_folder).get_completions(document, complete_event)
+        elif args_length == 1:
+            yield from WordCompleter(list(simulators_map.keys())).get_completions(document, complete_event)
            
 def main_command_completer():
     global simulators_map
@@ -421,7 +401,7 @@ def toolbar():
         case ["waveform_sim", *_]:
             return "Arguments: <folder> <filename.vcd> [-overwrite]"
         case ["build_live_sim", *_]:
-            return "Arguments: <folder>"
+            return "Arguments: <folder> <simulator>"
         case ["start_live_sim", *_]:
             return "No arguments"
         case ["help"] | ["?"]:
@@ -647,8 +627,7 @@ if __name__ == "__main__":
         # TODO: use this to warn users on running if the program seems to
         # have been modified since last compilation
         compiled_program: str | None = None
-        compiled_input_ports: dict[str, int] | None = None
-        compiled_output_ports: dict[str, int] | None = None
+        current_sim = None
 
         while True:
             try:
@@ -698,16 +677,15 @@ if __name__ == "__main__":
                                 raise ContinueException(f"{command} args are <folder> <filename.vcd> [-ov]")
                     case "build_live_sim":
                         match args:
-                            case [folder]:
+                            case [folder, mode]:
                                 files = crawl_input_directory("top.v", live_sim_folder, folder)
-                                build_live_sim(files, folder)
+                                build_live_sim(files, folder, mode)
                             case _:
-                                raise ContinueException(f"{command} needs folder argument")
+                                raise ContinueException(f"{command} requires both a folder and simulator")
                     case "start_live_sim":
-                        if len(args) != 1 or args[0] not in simulators_map:
-                            raise ContinueException(f"{command} takes one argument: one of {list(simulators_map.keys())}")
-                        sim_key = args[0]
-                        start_live_sim(sim_key, simulators_map[sim_key])
+                        if compiled_program is None or current_sim is None:
+                            raise ContinueException("Can't start live sim because no program has been built yet!")
+                        start_live_sim()
                     case "exit" | "quit":
                         exit(0)
                     case "help" | "?" | "-h":
