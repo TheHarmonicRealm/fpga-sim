@@ -1,7 +1,7 @@
 import re
 from string import Template
 from pathlib import Path
-import textwrap
+from shared__util import indent_text
 
 def chop_sp(in_str: str, prefix: str, suffix: str):
     '''chops off a suffix and a prefix'''
@@ -9,10 +9,6 @@ def chop_sp(in_str: str, prefix: str, suffix: str):
 
 cpp_dict_entry = Template("{\"$name\", PortReference((void*) &(top_ref->$name), $width)}")
 cpp_dict_wrapper = Template("std::unordered_map<std::string, PortReference> $name = {\n$entries_str\n};")
-
-def indent_text(in_str: str, depth: int=1):
-    '''indents x number of 4-space "tabs"'''
-    return textwrap.indent(in_str, (" " * 4) * depth)
 
 def double_quoted(in_str: str):
     '''C++ needs double but repr uses single -_-'''
