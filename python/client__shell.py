@@ -166,9 +166,6 @@ def print_build_errors(error_dicts_str: str, canonical_input: dict[str, int], ca
             if s is not None:
                 m = (m, s)
         errors_list.append(m)
-
-    print(f"{error_title()} Your program was valid Verilog code, but its top module's inputs and"
-          " outputs did not match the template.")
     print(indent_text("List of IO errors:"))
     for e in errors_list:
         match e:
@@ -185,19 +182,29 @@ def build_live_sim(input_files: list[NamedFile], folder_name: str, mode: str):
     if mode not in simulators_map.keys():
         raise ContinueException(f"There is no simulator named {mode}")
 
+    print("Generating header...", end="", flush=True)
+
+
     command = BuildLiveCommand(input_files, *simulator_ports[mode])
-    t1 = time.time()
+    t0 = time.time()
+    t1 = t0
     send_command(command)
 
     # header generation
     result = receive_error_or_ack(sock)
     match result:
         case ErrorMessage(content):
-            print("Server returned error message on header generation:")
+            print(f"{error_title()} Server returned error message on header generation:")
             print(colorize(content, f"verilog/live_sim/{folder_name}"))
             return False
         case AckMessage():
             pass
+
+    t2 = time.time()
+    print(f"success ({round((t2 - t1), 3)}s)")
+
+    t1 = t2
+    print("Checking ports...", end="", flush=True)
 
     # port checking
     # all done on server to avoid complex back-and-forth code, while still
@@ -209,35 +216,29 @@ def build_live_sim(input_files: list[NamedFile], folder_name: str, mode: str):
             #   check, and communicate back whether they were good?
             #   currently checked on server to reduce the back-and-forth
             #   this is FINE performance-wise but it's lousy
+            print(f"{error_title()} Your program was valid Verilog code, but "
+            "its top module's inputs and outputs did not match the template.")
             print_build_errors(content, *simulator_ports[mode])
             return False
         case AckMessage():
             pass
+    t2 = time.time()
+    print(f"success ({round((t2 - t1), 3)}s)")
+    t1 = t2
+
+    print("Building executable...", end="", flush=True)
 
     result = receive_error_or_ack(sock)
     t2 = time.time()
     match result:
         case ErrorMessage(content):
-            print("Server returned error message on final build:")
+            print(f"{error_title()} Server returned error message on final build:")
             print(colorize(content, f"verilog/live_sim/{folder_name}"))
         case AckMessage():
-            print(f"{success_title()} Built live simulation in {round((t2 - t1), 3)}s. Run with start_live_sim.")
+            print(f"success ({round((t2 - t1), 3)}s)")
+            print(f"{success_title()} Generated and built in {round((t2 - t0), 3)}s. Run with start_live_sim.")
             compiled_program = folder_name
             current_sim = mode
-
-            # TODO: at COMPILATION time take in sim name rather than at
-            #   launch time? Either:
-            #   * as an argument to build_live_sim
-            #       * don't want to type two things in but
-            #   * or have the user put the sim name in the folder/a comment in
-            #      top.v?
-            # Either would be better than not giving an error until runtime
-
-            # related TODO: cache the previous build somehow so if the new one
-            #   is bad that one is not lost? old system would not overrwrite
-            #   the executable until successfully compiled, but this one
-            #   compiles before the (new type of) error occurs so the previous
-            #   EXE is lost
 
 def start_live_sim():
     if compiled_program is None or current_sim is None:
