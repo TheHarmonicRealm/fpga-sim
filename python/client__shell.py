@@ -113,10 +113,13 @@ def print_build_errors(error_dicts_str: str, canonical_input: dict[str, int], ca
     evald_list: list[dict[str, int]] = ast.literal_eval(error_dicts_str)
     i_extra_ports, i_wrong_length_ports, i_missing_ports, o_extra_ports, o_wrong_length_ports, o_missing_ports = evald_list
 
-    errors_list: list[str] = []
+    errors_list: list[str | tuple[str, str]] = []
 
     def format_port(port: str, width: int | None = None):
         return f"\"{Style.BRIGHT}{port}{f":{width}" if width is not None else ""}{Style.RESET_ALL}\""
+    
+    def suggestion(content: str):
+        return f"{Style.BRIGHT}{Fore.GREEN}Suggestion:{Style.RESET_ALL} {content}"
     
     def bits(b: int):
         return f"{b} bits" if b != 1 else f"{b} bit"
@@ -144,19 +147,36 @@ def print_build_errors(error_dicts_str: str, canonical_input: dict[str, int], ca
 
     for port, width in i_missing_ports.items():
         m = f"Missing input {format_port(port, width)}."
+        if (aliases := port_aliases.get(port)):
+            s = None
+            for extra_port, extra_width in i_extra_ports.items():
+                if extra_port in aliases and extra_width == width:
+                    s = suggestion(f"rename {format_port(extra_port)} to {format_port(port)}")
+            if s is not None:
+                m = (m, s)
         errors_list.append(m)
-
-
 
     for port, width in o_missing_ports.items():
         m = f"Missing output {format_port(port, width)}."
+        if (aliases := port_aliases.get(port)):
+            s = None
+            for extra_port, extra_width in o_extra_ports.items():
+                if extra_port in aliases and extra_width == width:
+                    s = suggestion(f"rename {format_port(extra_port)} to {format_port(port)}")
+            if s is not None:
+                m = (m, s)
         errors_list.append(m)
 
     print(f"{error_title()} Your program was valid Verilog code, but its top module's inputs and"
           " outputs did not match the template.")
     print(indent_text("List of IO errors:"))
     for e in errors_list:
-        print(indent_text(f" * {e}", 1))
+        match e:
+            case m, s:
+                print(indent_text(f" * {m}", 1))
+                print(indent_text(f"   {s}", 1))
+            case m:
+                print(indent_text(f" * {m}", 1))
 
 
 def build_live_sim(input_files: list[NamedFile], folder_name: str, mode: str):
@@ -667,6 +687,21 @@ if __name__ == "__main__":
         
         simulator_ports = {
             "classic": ({'clk': 1, 'UB': 1, 'DB': 1, 'LB': 1, 'RB': 1, 'CB': 1, 'switches': 16}, {'segment': 7, 'DP': 1, 'anode': 4, 'lights': 16})
+        }
+
+        # covers the original constraints file's names for suggestions
+        # dp is the most important because v1 also had it lowercase
+        port_aliases = {
+            "UB": ["btnU"],
+            "DB": ["btnD"],
+            "LB": ["btnL"],
+            "RB": ["btnR"],
+            "CB": ["btnC"],
+            "DP": ["dp"],
+            "switches": ["sw"],
+            "lights": ["LED"],
+            "anode": ["an"],
+            "segment": ["seg"],
         }
 
         # call this to have experience like old one on Mac/Linux.
