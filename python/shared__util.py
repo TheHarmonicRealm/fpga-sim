@@ -8,6 +8,7 @@ import socket
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
+import textwrap
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -206,3 +207,7 @@ def dict_diff[T: Mapping](new: T, old: T) -> T:
         return dict(difference)
     else:
         return {}
+    
+def indent_text(in_str: str, depth: int=1):
+    '''indents x number of 4-space "tabs"'''
+    return textwrap.indent(in_str, (" " * 4) * depth)

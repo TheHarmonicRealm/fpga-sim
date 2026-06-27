@@ -1,3 +1,4 @@
+import ast
 import base64
 import os
 import re
@@ -46,6 +47,7 @@ from shared__util import (
     WaveformSimCommand,
     big_receive,
     deserialize_dataclass,
+    indent_text,
     receive_error_or_ack,
     send_message,
     serialize_dataclass,
@@ -106,6 +108,56 @@ def waveform_sim(input_files: list[NamedFile], output_path: Path, folder_name: s
                 case None:
                     print(result_start, f"Saved output to {Style.BRIGHT}{Fore.CYAN}{clickable_filepath(output_path, 2)}{Style.RESET_ALL}")
 
+def print_build_errors(error_dicts_str: str, canonical_input: dict[str, int], canonical_output: dict[str, int]):
+    # unpack from list. TODO: make this better with a dataclass or something
+    evald_list: list[dict[str, int]] = ast.literal_eval(error_dicts_str)
+    i_extra_ports, i_wrong_length_ports, i_missing_ports, o_extra_ports, o_wrong_length_ports, o_missing_ports = evald_list
+
+    errors_list: list[str] = []
+
+    def format_port(port: str, width: int | None = None):
+        return f"\"{Style.BRIGHT}{port}{f":{width}" if width is not None else ""}{Style.RESET_ALL}\""
+    
+    def bits(b: int):
+        return f"{b} bits" if b != 1 else f"{b} bit"
+
+    for port, width in i_extra_ports.items():
+        m = f"Unexpected input port {format_port(port, width)} was encountered."
+        m = f"Input {format_port(port, width)}: unexpected port."
+        errors_list.append(m)
+
+    for port, width in o_extra_ports.items():
+        m = f"Unexpected output port {format_port(port, width)} was encountered."
+        m = f"Output {format_port(port, width)}: unexpected port."
+        errors_list.append(m)
+
+    for port, width in i_wrong_length_ports.items():
+        m = (f"Input {format_port(port, None)}: {bits(width)} wide; "
+        f"expected {bits(canonical_input[port])}.")
+        errors_list.append(m)
+    
+    for port, width in o_wrong_length_ports.items():
+        m = (f"Output {format_port(port, None)}: {bits(width)} wide; "
+        f"expected {bits(canonical_output[port])}.")
+        errors_list.append(m)
+
+
+    for port, width in i_missing_ports.items():
+        m = f"Missing input {format_port(port, width)}."
+        errors_list.append(m)
+
+
+
+    for port, width in o_missing_ports.items():
+        m = f"Missing output {format_port(port, width)}."
+        errors_list.append(m)
+
+    print(f"{error_title()} Your program was valid Verilog code, but its top module's inputs and"
+          " outputs did not match the template.")
+    print(indent_text("List of IO errors:"))
+    for e in errors_list:
+        print(indent_text(f" * {e}", 1))
+
 
 def build_live_sim(input_files: list[NamedFile], folder_name: str, mode: str):
     global sock, compiled_program, current_sim
@@ -130,14 +182,11 @@ def build_live_sim(input_files: list[NamedFile], folder_name: str, mode: str):
     result = receive_error_or_ack(sock)
     match result:
         case ErrorMessage(content):
-            # server's message uses HTML and has us format with PPT so server
-            #   doesn't need to install any libraries on its own. And avoids
-            #   moving raw color codes cross-OS.
-            # TODO: could be better to send down "error dicts"?
-            #   like the list of missing ports, extra-ones, and mis-sized ones
-            #   and then the client compiles them into messages rather than
-            #   doing it past the Docker boundary
-            print_formatted_text(HTML(content))
+            # TODO: maybe instead send down computed inputs, have the client
+            #   check, and communicate back whether they were good?
+            #   currently checked on server to reduce the back-and-forth
+            #   this is FINE performance-wise but it's lousy
+            print_build_errors(content, *simulator_ports[mode])
             return False
         case AckMessage():
             pass

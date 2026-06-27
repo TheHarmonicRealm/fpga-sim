@@ -101,43 +101,40 @@ def live_sim(sock: socket.socket):
     # TODO: properly close process. Writing "exit\n" and calling process.wait() hangs forever...
 
 def verify_ports(candidate_input: dict[str, int], candidate_output: dict[str, int], canonical_input: dict[str, int], canonical_output: dict[str, int]):
-    def format_port(port: str, desired: bool = False):
-        return f"\"{"<ansicyan>" if desired else "<ansired>"}{port}{"</ansicyan>" if desired else "</ansired>"}\""
+    i_extra_ports: dict[str, int] = {}
+    i_wrong_length_ports: dict[str, int] = {}
+    i_missing_ports: dict[str, int] = {}
+    
+    o_extra_ports: dict[str, int] = {}
+    o_wrong_length_ports: dict[str, int] = {}
+    o_missing_ports: dict[str, int] = {}
 
-    errors_list = []
+    dicts = [i_extra_ports, i_wrong_length_ports, i_missing_ports, o_extra_ports, o_wrong_length_ports, o_missing_ports]
+
     for port, width in candidate_input.items():
         if not port in canonical_input:
-            errors_list.append(f"Unexpected input port {format_port(port)} was encountered")
-        elif width != (expected := canonical_input[port]):
-            errors_list.append(f"Input port {format_port(port, True)} has width {width}; should be {expected}")
+            i_extra_ports[port] = width
+        elif width != canonical_input[port]:
+            i_wrong_length_ports[port] = width
+
     for port, width in candidate_output.items():
         if not port in canonical_output:
-            errors_list.append(f"Unexpected output port {format_port(port)} was encountered")
-        elif width != (expected := canonical_output[port]):
-            errors_list.append(f"Output port {format_port(port, True)} has width {width}; should be {expected}")
+            o_extra_ports[port] = width
+        elif width != canonical_output[port]:
+            o_wrong_length_ports[port] = width
 
-    for port in canonical_input:
+    for port, width in canonical_input.items():
         if port not in candidate_input:
-            if (p_l := port.lower()) in candidate_input:
-                errors_list.append(f"Missing input port {format_port(port, True)}.\n    Suggestion: rename {format_port(p_l)} -> {format_port(port, True)}?")
-            elif (p_u := port.upper()) in candidate_input:
-                errors_list.append(f"Missing input port {format_port(port, True)}.\n    Suggestion: rename {format_port(p_u)} -> {format_port(port, True)}?")
-            else:
-                errors_list.append(f"Missing input port {format_port(port, True)}.")
-    for port in canonical_output:
-        if port not in candidate_output:
-            if (p_l := port.lower()) in candidate_output:
-                errors_list.append(f"Missing output port {format_port(port, True)}.\n    Suggestion: rename {format_port(p_l)} -> {format_port(port, True)}?")
-            elif (p_u := port.upper()) in candidate_output:
-                errors_list.append(f"Missing output port {format_port(port, True)}.\n    Suggestion: rename {format_port(p_u)} -> {format_port(port, True)}?")
-            else:
-                errors_list.append(f"Missing output port {format_port(port, True)}.")
+            i_missing_ports[port] = width
 
-    if (l := len(errors_list)) > 0:
-        return ErrorMessage(f"<ansired><b>Error:</b></ansired> your design had {l} input/output port error{"s" if l > 1 else ""}:\n • {"\n • ".join(errors_list)}")
+    for port, width in canonical_output.items():
+        if port not in candidate_output:
+            o_missing_ports[port] = width
+
+    if any(len(d) > 0 for d in dicts):
+        return ErrorMessage(repr(dicts))
     else:
         return AckMessage()
-
 def try_waveform_run(name: str, files: list[NamedFile]):
     names = [file.name for file in files]
     try:
