@@ -177,7 +177,7 @@ def print_build_errors(error_dicts_str: str, canonical_input: dict[str, int], ca
 
 
 def build_live_sim(input_files: list[NamedFile], folder_name: str, mode: str):
-    global sock, compiled_program, current_sim
+    global sock, compiled_program, current_sim, live_sim_hash
 
     if mode not in simulators_map.keys():
         raise ContinueException(f"There is no simulator named {mode}")
@@ -238,6 +238,7 @@ def build_live_sim(input_files: list[NamedFile], folder_name: str, mode: str):
             print(f"success ({round((t2 - t1), 3)}s)")
             print(f"{success_title()} Generated and built in {round((t2 - t0), 3)}s. Run with start_live_sim.")
             compiled_program = folder_name
+            live_sim_hash = hash(repr(files))
             current_sim = mode
 
 def start_live_sim():
@@ -412,7 +413,8 @@ def is_verilog(filename: str):
 def crawl_input_directory(front_target: str, containing_folder: Path, folder_name: str):
     folder = Path(*containing_folder.joinpath(folder_name).parts[-3:])
     try:
-        all_filenames = os.listdir(folder)
+        # sort so that hashing to verify unchanged is consistent
+        all_filenames = sorted(os.listdir(folder))
     except FileNotFoundError:
         raise ContinueException(f"./{folder} does not exist")
     except NotADirectoryError:
@@ -715,6 +717,7 @@ if __name__ == "__main__":
         # TODO: use this to warn users on running if the program seems to
         # have been modified since last compilation
         compiled_program: str | None = None
+        live_sim_hash: int | None = None
         current_sim = None
 
         while True:
@@ -771,9 +774,15 @@ if __name__ == "__main__":
                             case _:
                                 raise ContinueException(f"{command} requires both a folder and simulator")
                     case "start_live_sim":
-                        if compiled_program is None or current_sim is None:
+                        # note: only first is really needed but it narrows type for next thing
+                        if compiled_program is None or current_sim is None or live_sim_hash is None:
                             raise ContinueException("Can't start live sim because no program has been built yet!")
-                        start_live_sim()
+                        else:
+                            test_hash = hash(repr(crawl_input_directory("top.v", live_sim_folder, compiled_program)))
+                            if test_hash != live_sim_hash:
+                                # TODO: maybe make this prevent running unless the user passes an argument
+                                print("Warning: it appears your files have changed since the last build! You may want to rebuild.")
+                            start_live_sim()
                     case "exit" | "quit":
                         exit(0)
                     case "help" | "?" | "-h":
