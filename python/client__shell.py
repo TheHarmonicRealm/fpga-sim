@@ -162,6 +162,9 @@ def print_build_errors(error_dicts_str: str, canonical_input: dict[str, int], ca
 def build_live_sim(input_files: list[NamedFile], folder_name: str, mode: str):
     global sock, compiled_program, current_sim
 
+    if mode not in simulators_map.keys():
+        raise ContinueException(f"There is no simulator named {mode}")
+
     command = BuildLiveCommand(input_files, *simulator_ports[mode])
     t1 = time.time()
     send_command(command)
