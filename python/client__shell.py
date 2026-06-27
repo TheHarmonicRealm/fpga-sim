@@ -332,7 +332,7 @@ def main_command_completer():
         {
             "waveform_sim": WaveformSimCompleter(),
             "build_live_sim": BuildLiveSimCompleter(),
-            "start_live_sim": WordCompleter(list(simulators_map.keys())),
+            "start_live_sim": None,
             "help": None,
             "exit": None
         }
