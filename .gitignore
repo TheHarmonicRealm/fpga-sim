@@ -11,11 +11,3 @@ verilog/live_sim/*
 !verilog/live_sim/ex_*
 verilog/testbench/*
 !verilog/testbench/ex_*
-
-# .vscode/settings.json has untracked C++ include paths specific to dev
-# It is ignored in git index to keep it out of git status/changes menu
-# Changes can still be intentionally added
-
-# Commands to ignore/undo:
-#       git update-index --assume-unchanged .vscode/settings.json
-#       git update-index --no-assume-unchanged .vscode/settings.json
