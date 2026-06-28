@@ -13,7 +13,7 @@ from argparse import ArgumentParser
 from enum import Enum, auto
 from pathlib import Path
 from sys import argv
-from typing import IO
+from typing import IO, NoReturn
 
 from client__paths import (
     docker_tag_filepath,
@@ -506,7 +506,7 @@ def print_status(message: str, success: bool):
     else:
         print_formatted_text(HTML(f"<ansired>Error:</ansired> {message}"))
 
-def error_exit(message: str, *, hint: str = "", cmd: str = ""):
+def error_exit(message: str, *, hint: str = "", cmd: str = "") -> NoReturn:
     print_status(message, False)
 
     if hint != "":
