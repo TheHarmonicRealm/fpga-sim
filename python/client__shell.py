@@ -780,8 +780,9 @@ if __name__ == "__main__":
                         else:
                             test_hash = hash(repr(crawl_input_directory("top.v", live_sim_folder, compiled_program)))
                             if test_hash != live_sim_hash:
-                                # TODO: maybe make this prevent running unless the user passes an argument
                                 print("Warning: it appears your files have changed since the last build! You may want to rebuild.")
+                                if input("Run anyway? [Y/n] ").strip() in ["n", "no"]:
+                                    continue
                             start_live_sim()
                     case "exit" | "quit":
                         exit(0)
