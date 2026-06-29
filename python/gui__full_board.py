@@ -29,7 +29,7 @@ class OutputDict(TypedDict, total=True):
     # it doesn't need to be total but you can't mark a specific instance as
     # total so this lies to the type checker to make set_output_state not busy
     lights: int
-    DP: int
+    dp: int
     anode: int
     segment: int
 
@@ -46,7 +46,7 @@ class MainWindow(BaseGUIWindow):
     def __init__(self, program_name: str, sock: socket.socket, listener_done: threading.Event, have_quit: threading.Event):
         super().__init__(sock, listener_done, have_quit, program_name, "classic")
 
-        self.output_state = OutputDict(lights=0, DP=0b1, anode=0b1111, segment=0b111_111)
+        self.output_state = OutputDict(lights=0, dp=0b1, anode=0b1111, segment=0b111_111)
         self.input_state = InputDict(UB=0, DB=0, LB=0, RB=0, CB=0, switches=0)
 
         self.plus_buttons = BoardComponents.Buttons(self.shift_pressed)
@@ -100,7 +100,7 @@ class MainWindow(BaseGUIWindow):
         self.output_state.update(new_output_state)
         try:
             self.lights_line.set_output_state(self.output_state["lights"])
-            self.four_digits.set(self.output_state["segment"], self.output_state["DP"], self.output_state["anode"])
+            self.four_digits.set(self.output_state["segment"], self.output_state["dp"], self.output_state["anode"])
         except KeyError: # NOTE: see above... this will never happen currently
             print("Error: your verilog code's inputs and/or outputs did not match the required format for the \"classic\" board.")
             print(f"Please refer to the template at {Fore.CYAN}{Style.BRIGHT}./templates/classic.v{Style.RESET_ALL} if this is the board you meant to use.")

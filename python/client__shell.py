@@ -689,7 +689,7 @@ if __name__ == "__main__":
         }
         
         simulator_ports = {
-            "classic": ({'clk': 1, 'UB': 1, 'DB': 1, 'LB': 1, 'RB': 1, 'CB': 1, 'switches': 16}, {'segment': 7, 'DP': 1, 'anode': 4, 'lights': 16})
+            "classic": ({'clk': 1, 'UB': 1, 'DB': 1, 'LB': 1, 'RB': 1, 'CB': 1, 'switches': 16}, {'segment': 7, 'dp': 1, 'anode': 4, 'lights': 16})
         }
 
         # covers the original constraints file's names for suggestions
@@ -700,7 +700,7 @@ if __name__ == "__main__":
             "LB": ["btnL"],
             "RB": ["btnR"],
             "CB": ["btnC"],
-            "DP": ["dp"],
+            "dp": ["DP"],
             "switches": ["sw"],
             "lights": ["LED"],
             "anode": ["an"],
