@@ -90,7 +90,7 @@ class EmptyWindow(QMainWindow):
         self.setCentralWidget(central_widget)
         self.shift_pressed = threading.Event()
 
-        self.is_wayland =  "WAYLAND_DISPLAY" in os.environ
+        self.is_wayland = "WAYLAND_DISPLAY" in os.environ
 
     # Make window draggable from anywhere
     # (Added to allow moving while frameless)

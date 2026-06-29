@@ -14,6 +14,7 @@ from gui__widgets import (
     make_action,
     make_button,
     make_checkbox,
+    pseudo_disable,
     vbox_factory,
 )
 from PySide6.QtCore import QDeadlineTimer, QThread, QTimer, Signal
@@ -54,6 +55,7 @@ class BaseGUIWindow(EmptyWindow):
         self.fps_counter = QLabel("__.__/60 FPS")
 
 
+        self.paused = False
         self.pause_play_button = make_button("Pause simulation", self.pause_play, tooltip="Shortcut: P")
         self.reset_inputs_button = make_button("Reset inputs", self.reset_inputs, tooltip="Shortcut: R")
 
@@ -61,6 +63,9 @@ class BaseGUIWindow(EmptyWindow):
         self.frameless_checkbox = make_checkbox("Frameless", self.set_frameless)
 
         self.on_top_checkbox = make_checkbox("Always on top", self.set_on_top, checked=True)
+
+        if self.is_wayland:
+            pseudo_disable(self.on_top_checkbox, tooltip="Your display server (Wayland) ignores this setting and requires you to instead right-click this window's top bar to pin it!", checked=False)
 
         # reset, pause, window settings, and FPS counters are grouped here
         self.gui_meta_box = vbox_factory(

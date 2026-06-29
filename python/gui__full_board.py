@@ -14,10 +14,7 @@ from gui__util import reconstruct_socket_unix, reconstruct_socket_windows
 from gui__widgets import (
     BoardComponents,
     int_to_bool_list,
-    make_action,
     make_app,
-    make_button,
-    pseudo_disable,
     vbox_factory,
 )
 from PySide6.QtCore import QTimer, Slot
@@ -56,14 +53,6 @@ class MainWindow(BaseGUIWindow):
 
         self.input_widgets += [self.plus_buttons, self.switches_line]
 
-        if not self.is_wayland:
-            pseudo_disable(self.on_top_checkbox, tooltip="Your display server (Wayland) ignores this setting and requires you to instead right-click this window's top bar to pin it!", checked=False)
-
-        self.pause_play_button = make_button("Pause simulation", self.pause_play, tooltip="Shortcut: P")
-        self.reset_inputs_button = make_button("Reset inputs", self.reset_inputs, tooltip="Shortcut: R")
-
-        self.paused = False
-
         self.switches_line.state_changed.connect(lambda x: self.update_input_state(switches=x))
         self.plus_buttons.state_changed.connect(lambda x: self.update_input_state(buttons=x))
 
@@ -84,8 +73,6 @@ class MainWindow(BaseGUIWindow):
                 self.switches_line,
             )
         )
-
-        self.addAction(make_action("Quit app", self.close_signal.emit, "Ctrl+U", self))
 
         self.pinged.connect(self.update_fps)
         self.input_time.connect(self.update_server)
