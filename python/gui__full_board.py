@@ -44,7 +44,7 @@ class InputDict(TypedDict, total=False):
 
 class MainWindow(BaseGUIWindow):
     def __init__(self, program_name: str, sock: socket.socket, listener_done: threading.Event, have_quit: threading.Event):
-        super().__init__(f"\"{program_name}\" running on classic devkit", sock, listener_done, have_quit)
+        super().__init__(sock, listener_done, have_quit, program_name, "classic")
 
         self.output_state = OutputDict(lights=0, DP=0b1, anode=0b1111, segment=0b111_111)
         self.input_state = InputDict(UB=0, DB=0, LB=0, RB=0, CB=0, switches=0)
@@ -84,6 +84,8 @@ class MainWindow(BaseGUIWindow):
                 self.switches_line,
             )
         )
+
+        self.addAction(make_action("Quit app", self.close_signal.emit, "Ctrl+U", self))
 
         self.pinged.connect(self.update_fps)
         self.input_time.connect(self.update_server)

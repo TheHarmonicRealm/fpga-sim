@@ -35,8 +35,8 @@ class BaseGUIWindow(EmptyWindow):
     pinged = Signal()
     # unused -- removed quit button (but still works if i want to bring back)
     close_signal = Signal()
-    def __init__(self, title: str, sock: socket.socket, listener_done: threading.Event, have_quit: threading.Event):
-        super().__init__(title)
+    def __init__(self, sock: socket.socket, listener_done: threading.Event, have_quit: threading.Event, program_name: str, sim_name: str):
+        super().__init__(f"“{program_name}” ({sim_name})") # curly quotes (feels fancy)
         self.sock = sock
 
         # important: put thread under self or gc destroys it immediately
