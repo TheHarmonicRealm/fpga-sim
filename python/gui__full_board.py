@@ -13,6 +13,7 @@ from gui__base import BaseGUIWindow
 from gui__util import reconstruct_socket_unix, reconstruct_socket_windows
 from gui__widgets import (
     BoardComponents,
+    hbox_factory,
     int_to_bool_list,
     make_app,
     vbox_factory,
@@ -67,8 +68,7 @@ class MainWindow(BaseGUIWindow):
 
         self.model_interaction_box.addLayout(
             vbox_factory(
-                self.plus_buttons,
-                self.four_digits,
+                hbox_factory(self.plus_buttons, self.four_digits),
                 self.lights_line,
                 self.switches_line,
             )

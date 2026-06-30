@@ -565,7 +565,6 @@ class BoardComponents:
             self.checkboxes = [SwitchCheckbox() for _ in range(0, 16)]
             layout_hook = hbox_factory(*self.checkboxes, no_margins=True)
 
-            layout_hook.addItem(QSpacerItem(10, 0, QSizePolicy.Policy.Expanding))
             self.setLayout(layout_hook)
 
             for checkbox in self.checkboxes:
@@ -593,7 +592,6 @@ class BoardComponents:
             super().__init__()
             self.lights = [LightDisplay() for _ in range(0, 16)]
             layout_hook = hbox_factory(*self.lights, no_margins=True)
-            layout_hook.addItem(QSpacerItem(10, 0, QSizePolicy.Policy.Expanding))
             self.setLayout(layout_hook)
         
         def set_output_state(self, new_state: int):
