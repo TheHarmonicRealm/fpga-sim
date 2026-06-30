@@ -59,7 +59,7 @@ class BaseGUIWindow(EmptyWindow):
 
 
         self.paused = False
-        self.pause_play_button = make_button("Pause simulation", self.pause_play, tooltip="Shortcut: P")
+        self.pause_play_button = make_button("Pause", self.pause_play, tooltip="Shortcut: P")
         self.reset_inputs_button = make_button("Reset inputs", self.reset_inputs, tooltip="Shortcut: R")
 
 
@@ -97,15 +97,16 @@ class BaseGUIWindow(EmptyWindow):
         for w in self.input_widgets:
             w.reset_device()
 
-    
     def pause_play(self):
         self.paused = not self.paused
         if self.paused:
             self.setWindowTitle(f"{self.win_title} (paused)")
+            self.pause_play_button.setText("Play")
             self.fps_counter.setText(f"<em><code>&nbsp;PAUSED&nbsp;</code></em> FPS")
             self.last_few_fps.clear() # While paused, times are meaningless
         else:
             self.setWindowTitle(f"{self.win_title} (running)")
+            self.pause_play_button.setText("Pause")
             self.last_few_fps.clear()
             self.last_time = time.perf_counter()
             self.input_time.emit()
