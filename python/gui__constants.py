@@ -34,6 +34,11 @@ class Colors:
             on_fill = "#99b"
             off_fill = "#333"
 
+    class DotMatrix:
+        on = "#ffc145"
+        off = "#7d5300"
+        background = "#111"
+
 
 class Sizes:
     light = QSize(14, 14)

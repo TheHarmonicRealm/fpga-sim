@@ -685,11 +685,13 @@ if __name__ == "__main__":
         # TODO: store in a more user-serviceable way one day
         # or at least just store better, this is very temporary
         simulators_map = {
-            "classic": "gui__full_board.py"
+            "classic": "gui__full_board.py",
+            "dotmatrix": "gui__dotmatrix.py",
         }
         
         simulator_ports = {
-            "classic": ({'clk': 1, 'UB': 1, 'DB': 1, 'LB': 1, 'RB': 1, 'CB': 1, 'switches': 16}, {'segment': 7, 'dp': 1, 'anode': 4, 'lights': 16})
+            "classic": ({'clk': 1, 'UB': 1, 'DB': 1, 'LB': 1, 'RB': 1, 'CB': 1, 'switches': 16}, {'segment': 7, 'dp': 1, 'anode': 4, 'lights': 16}),
+            "dotmatrix": ({'clk': 1, 'UB': 1, 'DB': 1, 'LB': 1, 'RB': 1, 'CB': 1, 'switches': 16}, {'select': 4, 'matrix': 21})
         }
 
         # covers the original constraints file's names for suggestions
@@ -787,6 +789,7 @@ if __name__ == "__main__":
                     case "exit" | "quit":
                         exit(0)
                     case "help" | "?" | "-h":
+                        # TODO: store command help in a reasonable way
                         print("Available commands: \n* build_live_sim <folder>\n* waveform_sim <folder> <filename.vcd> [-overwrite]\n* start_live_sim\n* exit")
                     case _:
                         print("Unrecognized command")

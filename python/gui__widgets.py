@@ -521,6 +521,33 @@ class SevenSegmentLight:
                 light.set_light(False)
             self.DP.set_light(False)
 
+class DotMatrix15:
+    def __init__(self):
+        super().__init__()
+        self.lights = [LightDisplay(on_color=c.Colors.DotMatrix.on, off_color=c.Colors.DotMatrix.off, fade_delay_time=c.segment_fade_delay_time//2, off_time=c.segment_off_time//2, fade_on=False) for _ in range(0, 21)]
+
+        self.layout = QGridLayout()
+        self.layout.setSpacing(1)
+
+        count = 0
+
+        row, col = 0, 0 # to type-check to bound after loop
+
+        for row in range(0, 7):
+            for col in range(0, 3):
+                self.layout.addWidget(self.lights[count], row, col)
+                count += 1
+
+        self.layout.addItem(QSpacerItem(0, 0, QSizePolicy.Policy.Expanding), row+1, col)
+    
+    def set_lights(self, lights: int, enable: bool):
+        if not enable:
+            for light in self.lights:
+                light.set_light(False)
+        else:
+            for light, state in zip(self.lights, int_to_bool_list(lights, 21, invert=False)):
+                light.set_light(state)
+
 
 class InputWidget(QWidget):
     '''Should be a subclass of ABC but that is incompatible with how PySide6
@@ -564,7 +591,6 @@ class BoardComponents:
             super().__init__()
             self.checkboxes = [SwitchCheckbox() for _ in range(0, 16)]
             layout_hook = hbox_factory(*self.checkboxes, no_margins=True)
-
             self.setLayout(layout_hook)
 
             for checkbox in self.checkboxes:
@@ -586,6 +612,33 @@ class BoardComponents:
         def reset_device(self):
             for switch in self.checkboxes:
                 switch.setChecked(False)
+
+    class DotMatrixGroup(QWidget):
+        def __init__(self, count: int):
+            if count < 1:
+                raise ValueError(f"DotMatrixGroup count must be >1. Received: {count}!")
+            self.count = count
+            super().__init__()
+            self.digits = [DotMatrix15() for _ in range(count)]
+
+            self.layout_hook = hbox_factory(*[digit.layout for digit in self.digits], no_margins=True)
+
+            self.layout_hook.setSpacing(4)
+            self.layout_hook.setSizeConstraint(QLayout.SizeConstraint.SetFixedSize)
+
+            pal = QPalette()
+            pal.setColor(QPalette.ColorRole.Window, c.Colors.DotMatrix.background)
+            self.setPalette(pal)
+            self.setAutoFillBackground(True)
+            
+            self.setLayout(self.layout_hook)
+
+            self.setContentsMargins(10, 10, 10, 10)
+
+        @Slot(int, int)
+        def set(self, pattern: int, select: int):
+            for digit, enable in zip(self.digits, int_to_bool_list(select, self.count, invert=False)):
+                digit.set_lights(pattern, enable)
 
     class Lights(QWidget):
         def __init__(self):
