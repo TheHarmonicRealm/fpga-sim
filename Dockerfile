@@ -6,21 +6,24 @@
         # If both must be fully built, they run in parallel. On my Mac this took
         # over an hour, vs 18 minutes total when I built the native one, then
         # ran this (which reuses the cache and thus skips the native one)
-    # docker buildx build --platform linux/amd64,linux/arm64 -t fpga-sim-server:v1 .
+    # docker buildx build --platform linux/amd64,linux/arm64 -t ghcr.io/theharmonicrealm/fpga-sim-server:v2 .
 
     #### Export images in ARM and x86 format after building
-    # docker image save --output fpga_sim_image_x86.tar fpga-sim-server:v2 --platform linux/amd64
-    # docker image save --output fpga_sim_image_ARM.tar fpga-sim-server:v2 --platform linux/arm64
+    # docker image save --output fpga_sim_image_x86.tar ghcr.io/theharmonicrealm/fpga-sim-server:v2 --platform linux/amd64
+    # docker image save --output fpga_sim_image_ARM.tar ghcr.io/theharmonicrealm/fpga-sim-server:v2 --platform linux/arm64
     
     #### Load the output of last command onto user machine
     # docker load -i fpga_sim_image_x86.tar
     # docker load -i fpga_sim_image_ARM.tar
 
-    #### Build image from the docker_cache folder for local use. Could be used if server code is very volatile to let users rebuild quickly, but just distributing tar is easier:
-    # docker buildx build --cache-to type=local,dest=./docker_cache --cache-from type=local,src=./docker_cache -t fpga-sim-server:v1 . 
+    #### Normal build for current platform
+    # docker buildx build -t ghcr.io/theharmonicrealm/fpga-sim-server:v2 .
 
-    #### Normal build (equivalent to the above command after first time, as the cache will be copied into the main cache)
-    # docker buildx build -t fpga-sim-server:v2 .
+    #### Push to GitHub:
+    #### Log in (enter PAT on password prompt)
+    # docker login ghcr.io -u TheHarmonicRealm
+    #### Push
+    # docker push ghcr.io/theharmonicrealm/fpga-sim-server:{current tag}
 
 FROM ubuntu:22.04@sha256:fed6ddb82c61194e1814e93b59cfcb6759e5aa33c4e41bb3782313c2386ed6df
 WORKDIR /usr/bin/
