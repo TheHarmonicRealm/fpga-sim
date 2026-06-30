@@ -9,6 +9,8 @@ The live simulation window uses PySide6 (Qt), while the CLI uses
 Python Prompt Toolkit and Colorama.
  <!-- TODO: eliminate Colorama in favor of PPT's color features? -->
 
+<!-- TODO: update GIFs for new (more horizontal) layout and add
+ones showing the dot-matrix board -->
 <picture>
   <source alt="GIF demonstrating live simulation" media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/b53f4bde-7469-4815-a827-48ac8b01094f">
   <source alt="GIF demonstrating live simulation" media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/9a959d62-3031-48f5-b0cf-86b5cd25d2df">
@@ -216,9 +218,6 @@ and possibly a new Python version. After the first time,
 the program is still run with this command and should not have any
 unusual startup delay.
 
-* **You cannot run the script with a different command**, as the Python
-version must be correct and the packages must be available.
-
 > [!Note]
 > You cannot run the script with a different command. uv ensures you are on the correct Python
 version and have the necessary packages available.
@@ -282,25 +281,32 @@ program again.
 > [!Note]  
 > Unlike live simulation, testbench/waveform simulation does not have separate build and run steps.
 
-
 ### Live simulation
-Place your modules in a new folder within the `verilog/live_sim` folder.
-The top module must be called `top`, and must have inputs and outputs matching
-the example in `verilog/live_sim/ex_live`. The folder and module names must
-contain only underscores and letters.
+This program currently supports two live simulation boards: "classic" and
+"dotmatrix." The former has four seven-segment digits, a row of 16 switches
+and lights, and 5 buttons in a "plus" shape. The latter has four 21-pixel
+dot-matrix digits along with the same buttons and switches
+(omitting the 16 lights).
 
-Do not include `$display` statements anywhere in your code. These will crash
-the simulator. (There are probably other commands like this that can break it.)
+One example program is provided for each board, at `verilog/live_sim/ex_classic`
+and `verilog/live_sim/ex_dotmatrix`. The simulators each provide a 60 Hz clock
+accessible as an input.
 
-Build your simulation with: `build_live_sim <input_directory_name>`,
-for example calling as `build_live_sim ex_live` to build the provided example.
-This may take a few minutes.
+Write Verilog or SystemVerilog code with the same inputs and outputs as the
+examples, and compile it with the `build_live_sim` command, providing the
+directory name and the simulator name. For example, the dot matrix example
+compiles with the below:
 
-Run your simulation with `start_live_sim`. Note that, if you build a simulation,
-then close the app, the simulation must be built again in order to run it;
-compiled modules are not preserved between runs of the program. This will open
-a visual window running your model. Notes about it:
-
+```
+build_live_sim ex_dotmatrix dotmatrix
+```
+Notes:
+* The folder and module names must contain only underscores and letters.
+* If you edit any files inside a folder you have built, you will be warned
+when starting so you don't incorrectly run it thinking it is the most updated
+program. This warning has a `[Y/n]` prompt, meaning you must type "n" exactly
+and hit enter, or it will start.
+* Display statements are supported (but not heavily tested yet).
 * On some platforms, this window might not automatically go the front,
 so if you don't see anything after a couple seconds check your window
 switcher.
@@ -317,7 +323,7 @@ It can be paused and unpaused with <kbd>P</kbd> or the button at the bottom.
     bar and select the relevant option to get the same effect.
   
 
-* **Mac/Linux-only**: in the CLI, if you press tab you can get suggestions and
+* In the CLI, if you press tab you can get suggestions and
 autocomplete for commands, and, in the second argument position, folder names
 for `waveform_sim`/`build_live_sim`. There is also up/down history browsing
 like in a real shell.
@@ -340,7 +346,7 @@ time.
 Sometimes, the online Docker image will be changed without breaking
 compatibility, so the version number will not increase. I will not announce
 these; if you want to stay on the cutting edge, you can run the docker pull
-command at any time. **The current Docker image version is v1.**
+command at any time. **The current Docker image version is v2.**
 
 ## Native mode
 
@@ -368,6 +374,8 @@ know about your experience, successful or not!
 Using this mode:
 1. From the top fpga-sim folder, set up the server with:
 
+    <!-- TODO: maintain this script!!! perhaps could scrape the copying list from
+    the Dockerfile somehow -->
     ```
     uv run python/setup_host_server.py <path>
     ```
