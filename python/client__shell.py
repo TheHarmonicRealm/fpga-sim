@@ -341,7 +341,7 @@ def main_command_completer():
 
 
 def get_server_image_tags():
-    proc = subprocess.run('docker image ls fpga-sim-server --format "{{.Tag}}"', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+    proc = subprocess.run('docker image ls ghcr.io/theharmonicrealm/fpga-sim-server --format "{{.Tag}}"', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     match proc.returncode:
         case 0:
             tags = proc.stdout.decode().strip()
@@ -357,7 +357,7 @@ def get_latest_container_port(tag: str):
     Error if there are no containers open or if Docker seems to be unopened.'''
     # Command prints string with 0 or more lines of this if successful:
     #   '{container hex id}|0.0.0.0:{port}->9834/tcp, [::]:{port}->9834/tcp'
-    proc = subprocess.run(f'docker ps --format "{r"{{.ID}}|{{.Ports}}"}" --filter "ancestor=fpga-sim-server:{tag}"', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+    proc = subprocess.run(f'docker ps --format "{r"{{.ID}}|{{.Ports}}"}" --filter "ancestor=ghcr.io/theharmonicrealm/fpga-sim-server:{tag}"', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     match proc.returncode:
         case 0:
             output = proc.stdout.decode()
@@ -609,15 +609,15 @@ if __name__ == "__main__":
             error_exit(f"Docker is open, but {e}", hint="Try running this program again. This is an unusual error.")
 
         if available_tags is None:
-            error_exit(f"The necessary Docker image (fpga-sim-server:{required_tag}) is not installed, under any version", hint="Run docker pull as described in the README at", cmd="https://github.com/TheHarmonicRealm/fpga-sim")
+            error_exit(f"The necessary Docker image (ghcr.io/theharmonicrealm/fpga-sim-server:{required_tag}) is not installed, under any version", hint="Run docker pull as described in the README at", cmd="https://github.com/TheHarmonicRealm/fpga-sim")
         elif required_tag not in available_tags:
-            error_exit(f"Other versions (tags {available_tags}) are installed, but required fpga-sim-server:{required_tag} is not installed", hint="Run git pull and/or the docker pull command described in the README at", cmd="https://github.com/TheHarmonicRealm/fpga-sim")
+            error_exit(f"Other versions (tags {available_tags}) are installed, but required ghcr.io/theharmonicrealm/fpga-sim-server:{required_tag} is not installed", hint="Run git pull and/or the docker pull command described in the README at", cmd="https://github.com/TheHarmonicRealm/fpga-sim")
         # Launch docker:
         #   preexec_fn is part of ignoring ctrl-C
         if sys.platform != 'win32':
-            process = subprocess.Popen(f"docker run --rm -p 0:9834 fpga-sim-server:{required_tag}", text=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True, preexec_fn=os.setpgrp)
+            process = subprocess.Popen(f"docker run --rm -p 0:9834 ghcr.io/theharmonicrealm/fpga-sim-server:{required_tag}", text=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True, preexec_fn=os.setpgrp)
         else: # setpgrp unavailable on Windows. TODO: figure out equivalent code to ignore on Windows
-            process = subprocess.Popen(f"docker run --rm -p 0:9834 fpga-sim-server:{required_tag}", text=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+            process = subprocess.Popen(f"docker run --rm -p 0:9834 ghcr.io/theharmonicrealm/fpga-sim-server:{required_tag}", text=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
         # wait until first print-out
         out_pipe: IO[str] = process.stdout # pyright: ignore[reportAssignmentType]
         out_pipe.readline()

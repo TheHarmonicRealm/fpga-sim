@@ -192,24 +192,14 @@ the simulator program. They will visibly fail if it is not.
     * x86:
 
         ```
-        docker pull --platform linux/amd64 ghcr.io/theharmonicrealm/fpga-sim-server:v1
+        docker pull --platform linux/amd64 ghcr.io/theharmonicrealm/fpga-sim-server:v2
         ```
 
     * ARM:
 
         ```
-        docker pull --platform linux/arm64 ghcr.io/theharmonicrealm/fpga-sim-server:v1
+        docker pull --platform linux/arm64 ghcr.io/theharmonicrealm/fpga-sim-server:v2
         ```
-
-* Tag the pulled image, creating an alias that the program can find:
-```
-docker tag ghcr.io/theharmonicrealm/fpga-sim-server:v1 fpga-sim-server:v1
-```
-
-> [!Note]  
-> The need for the tagging step will be eliminated when the Docker image
-> updates to v2 (not imminent). This current setup maintains compatibility
-> for users who installed before the images were hosted on GHCR.
 
 8. From the `fpga-sim` directory
 (the IDE's integrated terminal is convenient and will start in the right place;
