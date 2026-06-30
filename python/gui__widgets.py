@@ -624,7 +624,8 @@ class BoardComponents:
             layout_hook.addWidget(self.BTNL, 1, 0)
             layout_hook.addWidget(self.BTNR, 1, 2)
             layout_hook.addWidget(self.BTNC, 1, 1)
-            layout_hook.addItem(QSpacerItem(0, 0, QSizePolicy.Policy.Expanding), 0, 3)
+            layout_hook.setSpacing(5)
+            layout_hook.setSizeConstraint(QLayout.SizeConstraint.SetFixedSize)
 
         def __get_input_state(self, new_button: StickyButton | None = None) :
             # new_button is forced to true if provided; it is currently pressed but not checked
