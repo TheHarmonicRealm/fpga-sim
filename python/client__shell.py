@@ -217,7 +217,9 @@ def build_live_sim(input_files: list[NamedFile], folder_name: str, mode: str):
             #   currently checked on server to reduce the back-and-forth
             #   this is FINE performance-wise but it's lousy
             print(f"{error_title()} Your program was valid Verilog code, but "
-            "its top module's inputs and outputs did not match the template.")
+            "its top module's inputs and outputs did not match this simulator's "
+            "required list; see a working example at "
+            f"{Fore.CYAN}{Style.BRIGHT}./verilog/live_sim/ex_{mode}/top.v{Style.RESET_ALL}.")
             print_build_errors(content, *simulator_ports[mode])
             return False
         case AckMessage():
