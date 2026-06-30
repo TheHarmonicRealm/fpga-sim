@@ -35,12 +35,16 @@ except FileExistsError:
     exit(1)
 
 to_copy = [
-    top_folder.joinpath("python/gui__states.py"),
-    top_folder.joinpath("python/shared__util.py"),
     top_folder.joinpath("python/server__manager.py"),
+    top_folder.joinpath("python/shared__util.py"),
+    top_folder.joinpath("python/extract_ports.py"),
     top_folder.joinpath("server_materials/Makefile"),
     top_folder.joinpath("server_materials/Makefile_obj"),
-    top_folder.joinpath("server_materials/simulator_driver.cpp"),
+    top_folder.joinpath("server_materials/port_ref.cpp"),
+    top_folder.joinpath("server_materials/port_ref.h"),
+    top_folder.joinpath("server_materials/simulator_driver_template.cpp"),
+    top_folder.joinpath("server_materials/string_dict_tools.cpp"),
+    top_folder.joinpath("server_materials/string_dict_tools.h"),
     top_folder.joinpath("server_materials/Waveform_Run.sh")
     ]
 
