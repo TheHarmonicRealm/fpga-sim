@@ -37,7 +37,10 @@ class BaseGUIWindow(EmptyWindow):
     # unused -- removed quit button (but still works if i want to bring back)
     close_signal = Signal()
     def __init__(self, sock: socket.socket, listener_done: threading.Event, have_quit: threading.Event, program_name: str, sim_name: str):
-        super().__init__(f"“{program_name}” ({sim_name})") # curly quotes (feels fancy)
+        # sim_name is currently unused. didn't love including in window title
+        # but might put elsewhere on the actual window later
+        self.win_title = f"“{program_name}”"
+        super().__init__(f"{self.win_title} (running)")
         self.sock = sock
 
         # important: put thread under self or gc destroys it immediately
@@ -98,11 +101,11 @@ class BaseGUIWindow(EmptyWindow):
     def pause_play(self):
         self.paused = not self.paused
         if self.paused:
-            self.pause_play_button.setText("Play")
+            self.setWindowTitle(f"{self.win_title} (paused)")
             self.fps_counter.setText(f"<em><code>&nbsp;PAUSED&nbsp;</code></em> FPS")
             self.last_few_fps.clear() # While paused, times are meaningless
         else:
-            self.pause_play_button.setText("Pause")
+            self.setWindowTitle(f"{self.win_title} (running)")
             self.last_few_fps.clear()
             self.last_time = time.perf_counter()
             self.input_time.emit()
