@@ -469,28 +469,6 @@ def waveform_viewer_wizard():
 
     return viewer_choice
 
-def toolbar():
-    full_text = get_app().current_buffer.text
-    split_line = full_text.split()
-    if full_text.endswith(" ") and split_line != []:
-        split_line.append(" ") # add a fake word
-    match split_line:
-        case ["waveform_sim", *_]:
-            return "Arguments: <folder> <filename.vcd> [-overwrite]"
-        case ["build_live_sim", *_]:
-            return "Arguments: <folder> <simulator>"
-        case ["start_live_sim", *_]:
-            return "No arguments"
-        case ["help"] | ["?"]:
-            return "Help!"
-        case ["exit"]:
-            return "Bye!"
-        case [_] | []:
-            return "Press tab/shift-tab or up/down to select suggestions, and space to accept the highlighted one"
-        case [_, _]:
-            return "It appears you are typing in an invalid command"
-        
-
 def is_docker_open():
     proc = subprocess.run("docker info", stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     match proc.returncode:
@@ -660,29 +638,6 @@ if __name__ == "__main__":
 
         signal.signal(signal.SIGINT, signal.SIG_IGN) # ignore ctrl-C
 
-
-        kb = KeyBindings()
-
-        # browse menu with tab/shift-tab or up/down
-        @kb.add("up")
-        def _(event: KeyPressEvent):
-            event.current_buffer.start_completion()
-            event.current_buffer.complete_previous()
-        @kb.add("down")
-        def _(event: KeyPressEvent):
-            event.current_buffer.start_completion()
-            event.current_buffer.complete_next()
-        @kb.add("c-i") # tab
-        def _(event: KeyPressEvent):
-            event.current_buffer.start_completion()
-            event.current_buffer.complete_next()
-        @kb.add("s-tab") # shift-tab
-        def _(event: KeyPressEvent):
-            event.current_buffer.start_completion()
-            event.current_buffer.complete_previous()
-
-        # apply keybindings. gets full functionality with small compromise!
-        # sesh = PromptSession("> ", completer=main_command_completer(), key_bindings=kb, bottom_toolbar=toolbar)
 
         # TODO: store in a more user-serviceable way one day
         # or at least just store better, this is very temporary
