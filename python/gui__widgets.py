@@ -522,14 +522,14 @@ class SevenSegmentLight:
             self.DP.set_light(False)
 
 class DotMatrixBlock:
-    def __init__(self, rows: int, cols: int):
+    def __init__(self, rows: int, cols: int, spacing: int = 1):
         if rows < 1 or cols < 1:
                 raise ValueError(f"DotMatrixBlock must be >1 column and >1 row. Received: {rows}x{cols}!")
         self.rows, self.cols = rows, cols
         self.lights = [LightDisplay(on_color=c.Colors.DotMatrix.on, off_color=c.Colors.DotMatrix.off, fade_delay_time=c.segment_fade_delay_time//2, off_time=c.segment_off_time//2, fade_on=False) for _ in range(0, rows * cols)]
 
         self.layout = QGridLayout()
-        self.layout.setSpacing(1)
+        self.layout.setSpacing(spacing)
 
         count = 0
 
@@ -616,16 +616,16 @@ class BoardComponents:
                 switch.setChecked(False)
 
     class DotMatrixGroup(QWidget):
-        def __init__(self, count: int, width: int = 3, height: int = 5):
+        def __init__(self, count: int, width: int = 3, height: int = 5, inter_spacing: int = 4, intra_spacing: int = 1):
             if count < 1:
                 raise ValueError(f"DotMatrixGroup count must be >1. Received: {count}!")
             self.count = count
             super().__init__()
-            self.digits = [DotMatrixBlock(height, width) for _ in range(count)]
+            self.digits = [DotMatrixBlock(height, width, intra_spacing) for _ in range(count)]
 
             self.layout_hook = hbox_factory(*[digit.layout for digit in self.digits], no_margins=True)
 
-            self.layout_hook.setSpacing(4)
+            self.layout_hook.setSpacing(inter_spacing)
             self.layout_hook.setSizeConstraint(QLayout.SizeConstraint.SetFixedSize)
 
             pal = QPalette()
