@@ -36,7 +36,7 @@ class BaseGUIWindow(EmptyWindow):
     pinged = Signal()
     # unused -- removed quit button (but still works if i want to bring back)
     close_signal = Signal()
-    def __init__(self, sock: socket.socket, listener_done: threading.Event, have_quit: threading.Event, program_name: str, sim_name: str, *, target_fps: int = 60, sleep_resolution: float = .0001):
+    def __init__(self, sock: socket.socket, listener_done: threading.Event, have_quit: threading.Event, program_name: str, sim_name: str, *, target_fps: int = 60, sleep_resolution: float = .0001, show_reset: bool = True):
         # sim_name is currently unused. didn't love including in window title
         # but might put elsewhere on the actual window later
         self.win_title = f"“{program_name}”"
@@ -73,10 +73,16 @@ class BaseGUIWindow(EmptyWindow):
             pseudo_disable(self.on_top_checkbox, tooltip="Your display server (Wayland) ignores this setting and requires you to instead right-click this window's top bar to pin it!", checked=False)
 
         # reset, pause, window settings, and FPS counters are grouped here
-        self.gui_meta_box = vbox_factory(
-            hbox_factory(self.pause_play_button, self.reset_inputs_button),
-            hbox_factory(self.fps_counter, self.frameless_checkbox, self.on_top_checkbox)
-        )
+        if show_reset:
+            self.gui_meta_box = vbox_factory(
+                hbox_factory(self.pause_play_button, self.reset_inputs_button),
+                hbox_factory(self.fps_counter, self.frameless_checkbox, self.on_top_checkbox)
+            )
+        else: # no reset lets us also move frameless checkbox to be more compact
+            self.gui_meta_box = vbox_factory( 
+                hbox_factory(self.pause_play_button, self.frameless_checkbox),
+                hbox_factory(self.fps_counter, self.on_top_checkbox)
+            )
 
         # subclasses put all their widgets in here 
         # Final so type checker prevents shadowing rather than adding
