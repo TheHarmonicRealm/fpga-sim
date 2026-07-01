@@ -666,10 +666,7 @@ if __name__ == "__main__":
             "segment": ["seg"],
         }
 
-        # call this to have experience like old one on Mac/Linux.
-        #   going with this to have the least disruption
-        #   TODO: support the fancy one with a setting. I think it's
-        #   *good* but could be distracting
+        # sets up readline-like behavior and selects completer
         sesh = PromptSession("> ", enable_history_search=True, complete_while_typing=False, completer=main_command_completer(), complete_style=CompleteStyle.READLINE_LIKE, history=InMemoryHistory())
 
         # Name of last successfully compiled Verilog program is stored
@@ -740,7 +737,7 @@ if __name__ == "__main__":
                             test_hash = hash(repr(crawl_input_directory("top.v", live_sim_folder, compiled_program)))
                             if test_hash != live_sim_hash:
                                 print("Warning: it appears your files have changed since the last build! You may want to rebuild.")
-                                if input("Run anyway? [Y/n] ").strip() in ["n", "no"]:
+                                if prompt("Run anyway? [Y/n] ").strip() in ["n", "no"]:
                                     continue
                             start_live_sim()
                     case "exit" | "quit":
