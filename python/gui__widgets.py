@@ -525,6 +525,7 @@ class DotMatrixBlock:
     def __init__(self, rows: int, cols: int):
         if rows < 1 or cols < 1:
                 raise ValueError(f"DotMatrixBlock must be >1 column and >1 row. Received: {rows}x{cols}!")
+        self.rows, self.cols = rows, cols
         self.lights = [LightDisplay(on_color=c.Colors.DotMatrix.on, off_color=c.Colors.DotMatrix.off, fade_delay_time=c.segment_fade_delay_time//2, off_time=c.segment_off_time//2, fade_on=False) for _ in range(0, rows * cols)]
 
         self.layout = QGridLayout()
@@ -546,7 +547,7 @@ class DotMatrixBlock:
             for light in self.lights:
                 light.set_light(False)
         else:
-            for light, state in zip(self.lights, int_to_bool_list(lights, 21, invert=False)):
+            for light, state in zip(self.lights, int_to_bool_list(lights, self.rows * self.cols, invert=False)):
                 light.set_light(state)
 
 
