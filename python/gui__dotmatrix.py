@@ -42,7 +42,7 @@ class MainWindow(BaseGUIWindow):
     def __init__(self, program_name: str, sock: socket.socket, listener_done: threading.Event, have_quit: threading.Event):
         super().__init__(sock, listener_done, have_quit, program_name, "dot matrix")
 
-        self.output_state = OutputDict(matrix=0b11, select=0b1001)
+        self.output_state = OutputDict(matrix=0, select=0)
         self.input_state = InputDict(UB=0, DB=0, LB=0, RB=0, CB=0, switches=0)
 
         self.plus_buttons = BoardComponents.Buttons(self.shift_pressed)
