@@ -46,7 +46,7 @@ class MainWindow(BaseGUIWindow):
         self.input_state = InputDict(UB=0, DB=0, LB=0, RB=0, CB=0, switches=0)
 
         self.plus_buttons = BoardComponents.Buttons(self.shift_pressed)
-        self.four_digits = BoardComponents.DotMatrixGroup(4)
+        self.four_digits = BoardComponents.DotMatrixGroup(4, 3, 7)
         self.switches_line = BoardComponents.Switches()
 
         self.input_widgets += [self.plus_buttons, self.switches_line]

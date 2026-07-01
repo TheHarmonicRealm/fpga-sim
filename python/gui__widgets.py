@@ -615,12 +615,12 @@ class BoardComponents:
                 switch.setChecked(False)
 
     class DotMatrixGroup(QWidget):
-        def __init__(self, count: int):
+        def __init__(self, count: int, width: int = 3, height: int = 5):
             if count < 1:
                 raise ValueError(f"DotMatrixGroup count must be >1. Received: {count}!")
             self.count = count
             super().__init__()
-            self.digits = [DotMatrixBlock(7, 3) for _ in range(count)]
+            self.digits = [DotMatrixBlock(height, width) for _ in range(count)]
 
             self.layout_hook = hbox_factory(*[digit.layout for digit in self.digits], no_margins=True)
 
