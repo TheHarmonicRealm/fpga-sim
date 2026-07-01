@@ -12,10 +12,17 @@ Python Prompt Toolkit and Colorama.
 <!-- TODO: update GIFs for new (more horizontal) layout and add
 ones showing the dot-matrix board -->
 <picture>
-  <source alt="GIF demonstrating live simulation" media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/b53f4bde-7469-4815-a827-48ac8b01094f">
-  <source alt="GIF demonstrating live simulation" media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/9a959d62-3031-48f5-b0cf-86b5cd25d2df">
-  <img width="500" alt="GIF demonstrating live simulation" srcset="https://github.com/user-attachments/assets/9a959d62-3031-48f5-b0cf-86b5cd25d2df">
+  <source alt="GIF demonstrating dot matrix live simulator" media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/a1291ce4-49ca-4a22-b925-f91d7fa6f45d">
+  <source alt="GIF demonstrating dot matrix live simulator" media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/2af7f70d-47fc-4f9e-88a9-38e6efc4db2b">
+  <img width="500" alt="GIF demonstrating dot matrix live simulator" srcset="https://github.com/user-attachments/assets/2af7f70d-47fc-4f9e-88a9-38e6efc4db2b">
 </picture>
+
+<picture>
+  <source alt="GIF demonstrating seven-segment live simulator" media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/78b05290-bae6-4134-b2cf-b26f40778892">
+  <source alt="GIF demonstrating seven-segment live simulator" media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/fa770242-4a87-4058-b61b-44a317e86483">
+  <img width="500" alt="GIF demonstrating seven-segment live simulator" srcset="https://github.com/user-attachments/assets/fa770242-4a87-4058-b61b-44a317e86483">
+</picture>
+
 
 Primary development is on Mac, with significant testing on Windows and Ubuntu.
 It is essentially identical across platforms and the live simulations used for
