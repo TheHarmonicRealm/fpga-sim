@@ -160,8 +160,10 @@ $output_ports
         else {
             update_inputs(input, input_ports_map);
         }
-
-        top->clk = !(top->clk); // Flip clock
+        
+        #ifdef HAS_A_CLK
+            top->clk = !(top->clk); // Flip clock
+        #endif
 
         contextp->timeInc(1);  // Advance one time unit
         top->eval(); // and run one frame of the model

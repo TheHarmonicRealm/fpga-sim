@@ -71,4 +71,7 @@ def write_driver(driver_template: Path, driver_output: Path, input_dict: dict[st
             input_ports=input_ports_str, output_ports=output_ports_str
         )
 
+    if ("clk", 1) in input_dict.items():
+        generated_content = "#define HAS_A_CLK\n" + generated_content
+
     driver_output.write_text(generated_content)
