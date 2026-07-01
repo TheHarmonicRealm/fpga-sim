@@ -44,8 +44,10 @@ more advanced computer skills to set up.
 * **Windows**:
     * Windows 11 version 22H2 (build 22631) or higher
         * Docker supports the currently-serviced versions of Windows 11 (see [Docker's Windows requirements](https://docs.docker.com/desktop/setup/install/windows-install/#system-requirements)).
+        * I heard from some students that Docker ran without any trouble on
+        Windows 10 but I have not tested this.
     * 8GB of RAM.
-        * It appears to be possible to configure WSL2 to use less RAM, to run Docker with less than 8GB. I have not tested this.
+        * It appears to be possible to configure WSL2 to use less RAM, to run Docker with under 8GB. I have not tested this.
 
 * **Linux**:
     * Minimum 4GB of RAM.
@@ -82,7 +84,13 @@ required to install a package when you try to run live simulation.
 
 ## Installation
 
-1. Open your terminal. [Check your CPU architecture](STUDENT_INSTRUCTIONS.md#identifying-processor-architecture),
+1. Open your terminal app. Others will mostly work fine if you are familiar with
+the terminal and want to use them, but the defaults are:
+* Terminal on Mac
+* Windows Terminal on Windows
+* Terminal, Konsole, or something else on Linux (varies by distro)
+
+In the terminal, [check your CPU architecture](STUDENT_INSTRUCTIONS.md#identifying-processor-architecture),
 as described in the student instructions.
 
 > [!Caution]
@@ -103,11 +111,14 @@ paste into your terminal and run. When that process says it is done, return to
 Docker and press the "try again" button.
 * You may need to restart after installing on Windows. It seems to vary by
 computer.
-* When prompted to make an account, you can skip. It is unnecessary for the
+* When prompted to make an account, you can skip. It is unnecessary for this
 program.
 * You can launch Docker from the command line with `docker desktop start`.
 I recommend disabling the "Open Docker Dashboard when Docker Desktop starts"
 option in Docker Desktop's settings.
+    * On Mac and possibly Windows, Docker will request a permission described
+    similarly to "network port mapping". Please accept this to allow the
+    container to connect to the command line program.
 
 **Linux**:
 * Install [Docker Engine](https://docs.docker.com/engine/install/);
@@ -136,7 +147,7 @@ installation process will start.
 Install [GTKWave](https://gtkwave.github.io/gtkwave/index.html) or
 [Surfer](https://gitlab.com/surfer-project/surfer) to somewhere that can be
 found by the terminal from your system path. GTKWave is not recommended on
-Windows if you are not experienced with compiling software.
+Windows unless you are experienced with compiling software.
 [Surfer can also be used in the browser](https://app.surfer-project.org/)
 (without an auto-opening feature, and maybe with bad performance).
 If you use another VCD viewer and like it, please contact me and I may add it
@@ -172,6 +183,11 @@ find uv, git, and VSCode.
 
 * In your terminal, run cd `~/Documents` to go to the Documents folder.
 
+
+> [!Caution]
+> If you are on Mac, [make sure this is not in an iCloud folder](#MacOS-iCloud-issue)
+or you will be frustrated later.
+
 * "Clone" this git repository. This will put the software in a new folder within
 Documents:
 
@@ -206,7 +222,7 @@ the simulator program. They will visibly fail if it is not.
 8. From the `fpga-sim` directory
 (the IDE's integrated terminal is convenient and will start in the right place;
 open it with <kbd>ctrl</kbd>+<kbd>`</kbd> in VSCode)
-run the program with:
+launch the program with:
 
 ```
 uv run ./python/client__shell.py
@@ -232,14 +248,12 @@ and server, and `help` to list the commands.
 
 The client provides suggestions when you press tab, and you can cycle through
 the current session's history using the up and down arrows, similarly to the
-external shell. Python Prompt Toolkit is used to provide an experience very
-similar to the Python standard library's readline functionality prevoiusly
-exclusively available on Mac.
+external shell.
 
 Suggestions are selected based on the index of the argument you are currently
 typing, to properly recommend folders or existing output files.
 
-Note that where an argument is shown in angle brackets (<>), you are replace
+Note that where an argument is shown in angle brackets (<>), you are to replace
 its value with your own, **without brackets.**
 For example, `print <name>` would be called as `print Goddard`,
 NOT `print <Goddard>`.
@@ -262,7 +276,7 @@ All filenames must match their module names (i.e. `lights` ↔︎ `lights.v`, et
 This rule goes for live simulation, too.
 
 Run the testbench with `waveform_sim <input_directory> <output_filename.vcd> [-overwrite]`.
-This may take a few minutes.
+This may take a few minutes in extreme cases.
 
 > [!Note]  
 > On Windows, when a waveform sim is run and the output opens automatically in VSCode, if it shows an error like "this file has an error and can't be opened", delete the file in the `python` folder called `waveform_viewer_choice.txt`. Close the program, run it again, and enter "None" when prompted to choose a waveform viewer.
@@ -289,17 +303,22 @@ dot-matrix digits along with the same buttons and switches
 (omitting the 16 lights).
 
 One example program is provided for each board, at `verilog/live_sim/ex_classic`
-and `verilog/live_sim/ex_dotmatrix`. The simulators each provide a 60 Hz clock
+and `verilog/live_sim/ex_dotmatrix`. The simulators both provide a 60 Hz clock
 accessible as an input.
 
 Write Verilog or SystemVerilog code with the same inputs and outputs as the
-examples, and compile it with the `build_live_sim` command, providing the
-directory name and the simulator name. For example, the dot matrix example
-compiles with the below:
+examples, and compile it with the `build_live_sim <input_directory> <simulator>`
+command. For example, the dot matrix example compiles with the below command:
 
 ```
 build_live_sim ex_dotmatrix dotmatrix
 ```
+
+After successfully building, launch the simulator with:
+```
+start_live_sim
+```
+
 Notes:
 * The folder and module names must contain only underscores and letters.
 * If you edit any files inside a folder you have built, you will be warned
@@ -329,6 +348,23 @@ for `waveform_sim`/`build_live_sim`. There is also up/down history browsing
 like in a real shell.
     * There is a third-party library for readline I want to eventually add
     so Windows has a better experience.
+
+#### Creating more live simulator "boards"
+
+Starting with v2, this program can support multiple live simulator boards
+without needing a new Docker image. Currently, this requires some knowledge of
+Python and a little knowledge of Qt, with new simulators needing two parts:
+* A Python script of any name, stored in the python folder. Base this on
+either `gui__dotmatrix.py` or `gui__classic.py`, both of which are quite
+similar to each other.
+* New entries in the `simulators_map` and `simulator_ports` dictionaries
+within `client__shell.py`. The former just points to the new file's name via a
+one-word alias, while the latter is a dictionary listing the names and widths
+of every port.
+
+I plan to further reduce the setup required for a new simulator by making the
+superclass in `gui__base.py` more advanced. I would also like create a small DSL
+to allow making new simulators without having to write any actual Python code.
 
 ## Updating the software
 
