@@ -36,12 +36,14 @@ class BaseGUIWindow(EmptyWindow):
     pinged = Signal()
     # unused -- removed quit button (but still works if i want to bring back)
     close_signal = Signal()
-    def __init__(self, sock: socket.socket, listener_done: threading.Event, have_quit: threading.Event, program_name: str, sim_name: str):
+    def __init__(self, sock: socket.socket, listener_done: threading.Event, have_quit: threading.Event, program_name: str, sim_name: str, *, target_fps: int = 60, sleep_resolution: float = .0001):
         # sim_name is currently unused. didn't love including in window title
         # but might put elsewhere on the actual window later
         self.win_title = f"“{program_name}”"
         super().__init__(f"{self.win_title} (running)")
         self.sock = sock
+        self.target_fps = target_fps
+        self.sleep_resolution = sleep_resolution
 
         # important: put thread under self or gc destroys it immediately
         self.listen_thread = ListenThread(self, listener_done, have_quit)
@@ -55,7 +57,7 @@ class BaseGUIWindow(EmptyWindow):
 
         self.last_few_fps: list[float] = []
         self.last_time = time.perf_counter()
-        self.fps_counter = QLabel("__.__/60 FPS")
+        self.fps_counter = QLabel(f"__.__/{target_fps} FPS")
 
 
         self.paused = False
@@ -116,7 +118,7 @@ class BaseGUIWindow(EmptyWindow):
         new_time = time.perf_counter()
         self.last_few_fps.append(1/(new_time - self.last_time))
         if len(self.last_few_fps) == 10:
-            self.fps_counter.setText(f"<code>{mean(self.last_few_fps):.2f}/60</code> FPS")
+            self.fps_counter.setText(f"<code>{mean(self.last_few_fps):.2f}/{self.target_fps}</code> FPS")
             self.last_few_fps.clear()
         self.last_time = new_time
 
@@ -136,7 +138,7 @@ class ListenThread(QThread):
         our_timer = QDeadlineTimer()
 
         while True:
-            our_timer.setPreciseRemainingTime(0, nsecs=round(1_000_000_000/60))
+            our_timer.setPreciseRemainingTime(0, nsecs=round(1_000_000_000/window.target_fps))
             window.input_time.emit()
             # response is either exit or a (maybe empty) list of lines printed by the Verilog program
             response = big_receive(sock).decode()
@@ -158,4 +160,4 @@ class ListenThread(QThread):
                     window.output_changed.emit(output_state)
 
             while not our_timer.hasExpired():
-                time.sleep(.0001)
+                time.sleep(window.sleep_resolution)
