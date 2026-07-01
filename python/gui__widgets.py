@@ -521,10 +521,11 @@ class SevenSegmentLight:
                 light.set_light(False)
             self.DP.set_light(False)
 
-class DotMatrix15:
-    def __init__(self):
-        super().__init__()
-        self.lights = [LightDisplay(on_color=c.Colors.DotMatrix.on, off_color=c.Colors.DotMatrix.off, fade_delay_time=c.segment_fade_delay_time//2, off_time=c.segment_off_time//2, fade_on=False) for _ in range(0, 21)]
+class DotMatrixBlock:
+    def __init__(self, rows: int, cols: int):
+        if rows < 1 or cols < 1:
+                raise ValueError(f"DotMatrixBlock must be >1 column and >1 row. Received: {rows}x{cols}!")
+        self.lights = [LightDisplay(on_color=c.Colors.DotMatrix.on, off_color=c.Colors.DotMatrix.off, fade_delay_time=c.segment_fade_delay_time//2, off_time=c.segment_off_time//2, fade_on=False) for _ in range(0, rows * cols)]
 
         self.layout = QGridLayout()
         self.layout.setSpacing(1)
@@ -533,8 +534,8 @@ class DotMatrix15:
 
         row, col = 0, 0 # to type-check to bound after loop
 
-        for row in range(0, 7):
-            for col in range(0, 3):
+        for row in range(0, rows):
+            for col in range(0, cols):
                 self.layout.addWidget(self.lights[count], row, col)
                 count += 1
 
@@ -619,7 +620,7 @@ class BoardComponents:
                 raise ValueError(f"DotMatrixGroup count must be >1. Received: {count}!")
             self.count = count
             super().__init__()
-            self.digits = [DotMatrix15() for _ in range(count)]
+            self.digits = [DotMatrixBlock(7, 3) for _ in range(count)]
 
             self.layout_hook = hbox_factory(*[digit.layout for digit in self.digits], no_margins=True)
 
