@@ -1,69 +1,58 @@
 # Graphical FPGA Simulator
 
-This is a program for students learning Verilog, using
-[Verilator](https://verilator.org) as its backend. It provides a friendly
-command-line interface to run Verilog code, both in testbenches and
-to drive interactive simulations.
-It uses Python and Docker (to run Verilator in an Ubuntu VM).
-The live simulation window uses PySide6 (Qt), while the CLI uses
-Python Prompt Toolkit and Colorama.
- <!-- TODO: eliminate Colorama in favor of PPT's color features? -->
-
-|  Demo GIFs     |
-| ----------- |
-| <picture><source alt="GIF demonstrating calculator simulator" media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/c8c07114-131b-43ee-afc3-545ec8088e07"><source alt="GIF demonstrating calculator live simulator" media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/2eafab1b-537e-4fc6-a43a-ab23dff7f231"><img width="500" alt="GIF demonstrating calculator live simulator" srcset="https://github.com/user-attachments/assets/2eafab1b-537e-4fc6-a43a-ab23dff7f231"></picture>|
-| <picture><source alt="GIF demonstrating dot matrix live simulator" media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/a1291ce4-49ca-4a22-b925-f91d7fa6f45d"><source alt="GIF demonstrating dot matrix live simulator" media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/2af7f70d-47fc-4f9e-88a9-38e6efc4db2b"><img width="500" alt="GIF demonstrating dot matrix live simulator" srcset="https://github.com/user-attachments/assets/2af7f70d-47fc-4f9e-88a9-38e6efc4db2b"></picture>|
-|   <picture><source alt="GIF demonstrating seven-segment live simulator" media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/78b05290-bae6-4134-b2cf-b26f40778892"><source alt="GIF demonstrating seven-segment live simulator" media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/fa770242-4a87-4058-b61b-44a317e86483"><img width="500" alt="GIF demonstrating seven-segment live simulator" srcset="https://github.com/user-attachments/assets/fa770242-4a87-4058-b61b-44a317e86483"></picture>     |
-
-
-
-
-
-
-
+This is a cross-platform program designed to help teach Verilog/SystemVerilog to
+students new to programming. It provides a friendly command-line interface, both
+to run Verilog testbenches and to run synthesizable code interactively on a
+"virtual FPGA board" (referred to as "live simulations").
 
 Primary development is on Mac, with significant testing on Windows and Ubuntu.
-It is essentially identical across platforms and the live simulations used for
-classes will run at full speed on almost any computer that can handle Docker.
-I recommend running the program on Mac or Linux over Windows if you
-have a choice; Windows is the most likely of the three to have tedious
-installation issues.
+This program will work almost identically across platforms, and reasonably
+simple live simulation code should run at full speed on most computers.
 
-This software was first used from March to May 2026 for ECE 2029,
-Introduction to Digital Circuit Design, at Worcester Polytechnic Institute (WPI)
-in Worcester, Massachusetts, for a class of about 120 students.
+This software was first used in spring 2026 for ECE 2029
+(*Introduction to Digital Circuit Design*) at Worcester Polytechnic Institute
+(WPI) in Worcester, Massachusetts, for a class of about 120 students.
+If you are an educator interested in using it for a class, please contact me via
+email or LinkedIn (both listed at my website, https://www.nobodybutnoah.com/).
+I would love to hear from people!
 
 ## System requirements
 
-Updated March 21, 2026, based on [Qt's requirements](https://doc.qt.io/qt-6/supported-platforms.html)
-and Docker's. Docker is the bounding dependency for all of these; if you obtain
+### Operating systems/hardware
+
+Updated July 2, 2026, based on [Qt's requirements](https://doc.qt.io/qt-6/supported-platforms.html)
+and on Docker's. Docker is the bounding dependency for all of these; if you obtain
 an older version, it may work on unsupported operating systems.
 [Native mode](#native-mode) does not require Docker, though it requires
 more advanced computer skills to set up.
 
 * **Mac**:
     * MacOS 14 Sonoma, 15 Sequoia, or 26 Tahoe
-        * Docker supports the last two versions of MacOS (see [Docker's Mac requirements](https://docs.docker.com/desktop/setup/install/mac-install/#system-requirements)).
-    * All models that can run Sonoma have at least 8GB of RAM, which is sufficient.
+        * Docker supports the last two versions of MacOS
+        (see [Docker's Mac requirements](https://docs.docker.com/desktop/setup/install/mac-install/#system-requirements)).
+    * All supported models have 8GB+ of RAM, well over Docker's 4GB minimum.
 
 * **Windows**:
     * Windows 11 version 22H2 (build 22631) or higher
-        * Docker supports the currently-serviced versions of Windows 11 (see [Docker's Windows requirements](https://docs.docker.com/desktop/setup/install/windows-install/#system-requirements)).
-        * I heard from some students that Docker ran without any trouble on
-        Windows 10 but I have not tested this.
-    * 8GB of RAM.
-        * It appears to be possible to configure WSL2 to use less RAM, to run Docker with under 8GB. I have not tested this.
+    * Windows 10 version 22H2 (build 19045) or higher
+        * Windows 10 Personal is not officially supported but I have heard from
+        students it works without any issues.
+        * Docker supports the currently-serviced versions of Windows
+        (see [Docker's Windows requirements](https://docs.docker.com/desktop/setup/install/windows-install/#system-requirements)),
+        which do not include standard Windows 10 Personal, but I have heard from some
+        students that it works without issue.
+    * At least 8GB of RAM.
+        * It may be possible to configure WSL2 to use less RAM and run Docker
+        on under 8GB.
 
 * **Linux**:
-    * Minimum 4GB of RAM.
-    * See these two links for information about Linux support:
+    * See these two links for information about Linux version support:
         * [Docker Engine's supported distributions](https://docs.docker.com/engine/install/)
-        * [Docker Desktop's system requirements](https://docs.docker.com/desktop/setup/install/linux/#general-system-requirements) (which are presumably greater than or equal to those of Engine)
+        * [Docker Desktop's system requirements](https://docs.docker.com/desktop/setup/install/linux/#general-system-requirements)
+        (which are presumably greater than or equal to those of Engine)
+    * At least 4GB of RAM.
 
-> [!Important]  
-> Students: please read [the student-targeted instructions](STUDENT_INSTRUCTIONS.md) before continuing.
-
-## Required software
+### Required software
 
 > [!Caution]
 > The recommended programs are trustworthy†, but please do not download random
@@ -71,7 +60,8 @@ software without thinking about it. The internet is a scary place!
 
 Instructions to install each of these are embedded in the list of steps.
 If any of these are already on your computer, there is no need to reinstall
-them.
+them. If you want, you can install the required software yourself then skip to
+step 7.
 
 * git to download the code
     * Check if you have it: run `git --version` in your terminal
@@ -87,10 +77,10 @@ highlighter
 * Linux users: if you happen to have not run a Qt app before, you may be
 required to install a package when you try to run live simulation.
 
-## Installation
+## Installation walkthrough
 
-1. Open your terminal app. Others will mostly work fine if you are familiar with
-the terminal and want to use them, but the defaults are:
+1. Open your terminal app. Others should work fine if you are familiar with
+the terminal and want to use them, but the appropriate built-in ones are:
 * Terminal on Mac
 * Windows Terminal on Windows
 * Terminal, Konsole, or something else on Linux (varies by distro)
@@ -159,12 +149,14 @@ If you use another VCD viewer and like it, please contact me and I may add it
 as an officially supported viewer to automatically open waveforms.
 
 4. Install uv:
-* Windows: use [uv's standalone Windows installer](https://docs.astral.sh/uv/getting-started/installation/#__tabbed_1_2) (paste the **first listed command** into your terminal to run a script).
+* Windows: use [uv's standalone Windows installer](https://docs.astral.sh/uv/getting-started/installation/#__tabbed_1_2)
+(paste the **first listed command** into your terminal to run a script).
     * This can also try installing with `py -m pip install uv`, which may
     work for some people if the normal installation fails.
         * If you install this way, uv must be invoked with `py -m uv`
         in place of `uv` (so `py -m uv run ...` etc)
-* Mac/Linux: use [uv's standalone Mac/Linux installer](https://docs.astral.sh/uv/getting-started/installation/#__tabbed_1_1) (paste the listed command in the terminal to run a script).
+* Mac/Linux: use [uv's standalone Mac/Linux installer](https://docs.astral.sh/uv/getting-started/installation/#__tabbed_1_1)
+(paste the listed command in the terminal to run a script).
 
 5. Install git:
 
@@ -186,12 +178,24 @@ find uv, git, and VSCode.
 
 7. Download the code and pull the Docker image:
 
-* In your terminal, run cd `~/Documents` to go to the Documents folder.
-
+* In your terminal, run `cd ~/Documents` to go to the Documents folder.
 
 > [!Caution]
-> If you are on Mac, [make sure this is not in an iCloud folder](#MacOS-iCloud-issue)
-or you will be frustrated later.
+> **If you are on Mac**, make sure Documents is not an iCloud folder, or
+> [you will run into issues later](https://stackoverflow.com/a/79852060)!
+> 
+> In the terminal, run `open .` to view the Documents folder in Finder. If
+> the "path bar" at the bottom of the window is not visible, press
+> <kbd>⌥</kbd>+<kbd>⌘</kbd>+<kbd>P</kbd> to show it:
+> 
+> * **If the leftmost item in the path bar is not iCloud Drive**, continue on
+> as normal.
+> 
+> * **If the leftost item in the path bar *is* iCloud Drive**, you need to use
+> a different folder:
+>     * In the terminal, run `cd ~` to go to your user folder.
+>     * Run `mkdir fpga-sim-app` then `cd ./fpga-sim-app` to make and enter a new folder
+
 
 * "Clone" this git repository. This will put the software in a new folder within
 Documents:
@@ -207,7 +211,7 @@ Documents:
     ```
 
 > [!Note]
-> Make sure Docker is open when loading the image and when running
+> Make sure Docker is open when pulling the image and when running
 the simulator program. They will visibly fail if it is not.
 
 * Pull the appropriate Docker image:
@@ -284,7 +288,10 @@ Run the testbench with `waveform_sim <input_directory> <output_filename.vcd> [-o
 This may take a few minutes in extreme cases.
 
 > [!Note]  
-> On Windows, when a waveform sim is run and the output opens automatically in VSCode, if it shows an error like "this file has an error and can't be opened", delete the file in the `python` folder called `waveform_viewer_choice.txt`. Close the program, run it again, and enter "None" when prompted to choose a waveform viewer.
+> On Windows, when a waveform sim is run and the output opens automatically in
+> VSCode, if it shows an error like "this file has an error and can't be opened",
+> delete the file in the `python` folder called `waveform_viewer_choice.txt`.
+> Close the program, run it again, and enter "None" when prompted to choose a waveform viewer.
 
 If `-overwrite`, or any shortening of it (`-o` or longer), is provided as the
 third argument, the output file will be overwritten if it already exists.
@@ -396,10 +403,6 @@ within `client__shell.py`. The former just points to the new file's name via a
 one-word alias, while the latter is a dictionary listing the names and widths
 of every port.
 
-I plan to further reduce the setup required for a new simulator by making the
-superclass in `gui__base.py` more advanced. I would also like create a small DSL
-to allow making new simulators without having to write any actual Python code.
-
 ## Updating the software
 
 Use `git pull` to update the project. This will not modify your waveform viewer
@@ -418,8 +421,9 @@ compatibility, so the version number will not increase. I will not announce
 these; if you want to stay on the cutting edge, you can run the docker pull
 command at any time. **The current Docker image version is v2.**
 
-## Native mode
+## Additional notes
 
+### Native mode
 While Ubuntu is the primary target for Verilator, it also compiles on
 Mac (both Clang and G++) and Windows, and some other systems;
 see [Verilator's install instructions](https://verilator.org/guide/latest/install.html#os-requirements)
@@ -478,47 +482,24 @@ Using this mode:
 
 </details>
 
+### Future plans
+
+Here are some things I intend to add in the future:
+* Support for Podman, an alternative container system which has some benefits
+(CLI-only option for Mac/Windows users, possibly better performance)
+    * If I can make native mode easier to use, and can confirm it works well on
+    Windows, I might make it the primary way to use the program and skip
+    containers entirely.
+* More virtual boards.
+* Changes to the virtual board system to require less effort on the part of
+people making new ones.
+    * A "DSL" (probably just Python-based) to assemble Qt layouts for a virtual
+    board using the existing widgets would be really cool.
+* Support for display statements in testbenches.
+* Better networking code so it's easier to send things back and forth.
+Currently the coordination between the server and client is pretty annoying to
+write. I imagine there is a library out there that could let me write
+`client__shell.py` and `server__manager.py` in a more pleasant way.
+
 ---
 †No warranty given by developer, etc.
-
-## MacOS iCloud issue
-
-<!-- todo: put this in a better spot. just throwing this in here for now to
-make sure I remember it is something to address! -->
-
-A common issue on MacOS comes from installing the software in a folder synced
-to iCloud. This will, eventually, lead to an error like this when trying to
-start the live simulator:
-
-> [qt.qpa.plugin] Could not find the Qt platform plugin "cocoa" in ""
-> 
-> This application failed to start because no Qt platform plugin could be initialized. Reinstall application may fix this problem.
-
-To solve this you must delete the folder in fpga-sim called `.venv` and then
-move the entire fpga-sim folder somewhere on your device that is not synced to
-iCloud. How to do this:
-
-1. In the terminal, in the fpga-sim folder, run this command to delete the .venv folder:
-
-```
-rm -r ./.venv
-```
-
-2. Now run this command to open the parent (`..` is a universal alias for
-"parent of the current folder") of the fpga-sim folder in Finder:
-
-```
-open ..
-```
-
-3. Open a new tab with command+T. Press command+shift+G to open the "Go" menu 
-and type in ~, then hit enter, to jump to your user folder, which is not synced.
-
-4. Switch back to the first tab and drag fpga-sim into the second tab.
-
-5. Close the old fpga-sim VSCode window, then drag fpga-sim from Finder onto
-the VSCode icon in the Dock to open it in VSCode.
-
-6. When you next run the program it will recreate the virtual environment.
-Things should now work as before without breaking again.
-
