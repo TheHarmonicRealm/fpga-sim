@@ -25,6 +25,7 @@ from PySide6.QtGui import (
     QBrush,
     QColor,
     QEnterEvent,
+    QFont,
     QGuiApplication,
     QKeyEvent,
     QKeySequence,
@@ -561,6 +562,44 @@ class InputWidget(QWidget):
     # @abstractmethod
     def reset_device(self) -> None:
         raise NotImplementedError(f"{self.__qualname__} must override method reset_device() of InputDevice!")
+
+
+class NormalButton(InputWidget):
+    '''Individual non-sticky button. Allows having a label.'''
+    state_changed = Signal(bool)
+    def __init__(self, label: str | None = None, size: QSize | None = c.Sizes.light, font_points: float | int | None = None, mono: bool = True):
+        super().__init__()
+
+        if label is not None:
+            self.button = QPushButton(label)
+        else:
+            self.button = QPushButton()
+
+        if size is not None:
+            self.button.setFixedSize(size)
+
+        self.button.setMinimumSize(0,0)
+        self.button.setSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.MinimumExpanding)
+
+        if mono:
+            new_font = QFont(["Cascadia Mono", "Menlo", "Consolas", "Lucida Console"])
+            new_font.setStyleHint(QFont.StyleHint.Monospace)
+        else:
+            new_font = self.button.font()
+
+        if font_points is not None:
+            new_font.setPointSizeF(float(font_points))
+        self.button.setFont(new_font)
+
+        self.button.pressed.connect(lambda: self.state_changed.emit(True))
+        self.button.released.connect(lambda: self.state_changed.emit(False))
+
+        self.layout_hook = hbox_factory(self.button)
+        self.setLayout(self.layout_hook)
+    
+    @override
+    def reset_device(self):
+        pass # can't hold down so nothing to do
 
 class BoardComponents:
     class FourDigits(QWidget):

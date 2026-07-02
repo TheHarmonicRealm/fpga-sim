@@ -50,6 +50,8 @@ class Sizes:
     horz_light = QSize(base_light_size * 3, base_light_size)
     vert_light = QSize(base_light_size, base_light_size * 3)
 
+    calc_button_height = 50
+    calc_button_font = 30
 
 
 light_off_time = 100
