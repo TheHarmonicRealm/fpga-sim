@@ -53,6 +53,16 @@ from shared__util import (
     serialize_dataclass,
 )
 
+def prompt_Y_n(warning: str, verb: str):
+    print(warning_title(), warning)
+    return prompt(f"{verb} anyway? [Y/n] ").strip().lower() not in ["n", "no"]
+
+def prompt_y_N(warning: str, verb: str):
+    print(warning_title(), warning)
+    return prompt(f"{verb} anyway? [y/N] ").strip().lower() in ["y", "yes"]
+
+def warning_title():
+    return f"{Fore.YELLOW}{Style.BRIGHT}Warning:{Style.RESET_ALL}"
 
 def error_title():
     return f"{Fore.RED}{Style.BRIGHT}Error:{Style.RESET_ALL}"
@@ -737,8 +747,7 @@ if __name__ == "__main__":
                         else:
                             test_hash = hash(repr(crawl_input_directory("top.v", live_sim_folder, compiled_program)))
                             if test_hash != live_sim_hash:
-                                print("Warning: it appears your files have changed since the last build! You may want to rebuild.")
-                                if prompt("Run anyway? [Y/n] ").strip() in ["n", "no"]:
+                                if not prompt_Y_n("it appears your program's files have changed since the last build! You may want to rebuild.", "Run"):
                                     continue
                             start_live_sim()
                     case "exit" | "quit":
