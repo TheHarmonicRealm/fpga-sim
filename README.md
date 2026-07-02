@@ -9,17 +9,17 @@ The live simulation window uses PySide6 (Qt), while the CLI uses
 Python Prompt Toolkit and Colorama.
  <!-- TODO: eliminate Colorama in favor of PPT's color features? -->
 
-<picture>
-  <source alt="GIF demonstrating dot matrix live simulator" media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/a1291ce4-49ca-4a22-b925-f91d7fa6f45d">
-  <source alt="GIF demonstrating dot matrix live simulator" media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/2af7f70d-47fc-4f9e-88a9-38e6efc4db2b">
-  <img width="500" alt="GIF demonstrating dot matrix live simulator" srcset="https://github.com/user-attachments/assets/2af7f70d-47fc-4f9e-88a9-38e6efc4db2b">
-</picture>
+|  Demo GIFs     |
+| ----------- |
+| <picture><source alt="GIF demonstrating calculator simulator" media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/c8c07114-131b-43ee-afc3-545ec8088e07"><source alt="GIF demonstrating calculator live simulator" media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/2eafab1b-537e-4fc6-a43a-ab23dff7f231"><img width="500" alt="GIF demonstrating calculator live simulator" srcset="https://github.com/user-attachments/assets/2eafab1b-537e-4fc6-a43a-ab23dff7f231"></picture>|
+| <picture><source alt="GIF demonstrating dot matrix live simulator" media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/a1291ce4-49ca-4a22-b925-f91d7fa6f45d"><source alt="GIF demonstrating dot matrix live simulator" media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/2af7f70d-47fc-4f9e-88a9-38e6efc4db2b"><img width="500" alt="GIF demonstrating dot matrix live simulator" srcset="https://github.com/user-attachments/assets/2af7f70d-47fc-4f9e-88a9-38e6efc4db2b"></picture>|
+|   <picture><source alt="GIF demonstrating seven-segment live simulator" media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/78b05290-bae6-4134-b2cf-b26f40778892"><source alt="GIF demonstrating seven-segment live simulator" media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/fa770242-4a87-4058-b61b-44a317e86483"><img width="500" alt="GIF demonstrating seven-segment live simulator" srcset="https://github.com/user-attachments/assets/fa770242-4a87-4058-b61b-44a317e86483"></picture>     |
 
-<picture>
-  <source alt="GIF demonstrating seven-segment live simulator" media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/78b05290-bae6-4134-b2cf-b26f40778892">
-  <source alt="GIF demonstrating seven-segment live simulator" media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/fa770242-4a87-4058-b61b-44a317e86483">
-  <img width="500" alt="GIF demonstrating seven-segment live simulator" srcset="https://github.com/user-attachments/assets/fa770242-4a87-4058-b61b-44a317e86483">
-</picture>
+
+
+
+
+
 
 
 Primary development is on Mac, with significant testing on Windows and Ubuntu.
