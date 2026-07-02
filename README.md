@@ -16,6 +16,16 @@ If you are an educator interested in using it for a class, please contact me via
 email or LinkedIn (both listed at my website, https://www.nobodybutnoah.com/).
 I would love to hear from people!
 
+## Live sim demos
+
+|  Simulator  | Light mode video | Dark mode video |
+| ----------- |------------------|-----------------|
+| Calculator  |  <video src="https://github.com/user-attachments/assets/108a40d1-4020-4faf-9412-b4e7bbbdb132"></video>   | <video src="https://github.com/user-attachments/assets/e49f20da-9169-4c5f-824d-552be7e8b0af"></video>
+| Dot matrix  |        <video src="https://github.com/user-attachments/assets/d38b5d25-d4c8-4af9-be07-1995f8975820"></video>         |      <video src="https://github.com/user-attachments/assets/d2a18546-ff38-4cd9-b04f-e3ec97e34079"></video>          |
+| Classic     |      <video src="https://github.com/user-attachments/assets/bcf54133-e3f5-4eb3-a1d4-95b62fc99866"></video>           |       <video src="https://github.com/user-attachments/assets/5381d70a-d619-407b-9ad4-64616ce2cbae"></video>         |
+
+
+
 ## System requirements
 
 ### Operating systems/hardware
