@@ -95,8 +95,9 @@ class BaseGUIWindow(EmptyWindow):
         #   Spacebar is more obvious, but it makes tabbed navigation not work
         self.addAction(make_action("Pause/play", self.pause_play_button.click, "P", self))
         
-        # Reset inputs with R
-        self.addAction(make_action("Reset inputs", self.reset_inputs_button.click, "R", self))
+        if show_reset:
+            # Reset inputs with R
+            self.addAction(make_action("Reset inputs", self.reset_inputs_button.click, "R", self))
 
         # Allow quitting with ctrl+W/cmd+W
         self.addAction(make_action("Quit simulation", QApplication.quit, "Ctrl+W", self))
