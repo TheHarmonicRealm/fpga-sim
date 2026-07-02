@@ -9,8 +9,6 @@ The live simulation window uses PySide6 (Qt), while the CLI uses
 Python Prompt Toolkit and Colorama.
  <!-- TODO: eliminate Colorama in favor of PPT's color features? -->
 
-<!-- TODO: update GIFs for new (more horizontal) layout and add
-ones showing the dot-matrix board -->
 <picture>
   <source alt="GIF demonstrating dot matrix live simulator" media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/a1291ce4-49ca-4a22-b925-f91d7fa6f45d">
   <source alt="GIF demonstrating dot matrix live simulator" media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/2af7f70d-47fc-4f9e-88a9-38e6efc4db2b">
@@ -303,15 +301,45 @@ program again.
 > Unlike live simulation, testbench/waveform simulation does not have separate build and run steps.
 
 ### Live simulation
-This program currently supports two live simulation boards: "classic" and
-"dotmatrix." The former has four seven-segment digits, a row of 16 switches
-and lights, and 5 buttons in a "plus" shape. The latter has four 21-pixel
-dot-matrix digits along with the same buttons and switches
-(omitting the 16 lights).
+This program currently comes with three "virtual boards" for live simulation.
+Each provides a clock signal.
 
-One example program is provided for each board, at `verilog/live_sim/ex_classic`
-and `verilog/live_sim/ex_dotmatrix`. The simulators both provide a 60 Hz clock
-accessible as an input.
+<details>
+
+<summary>List of provided boards</summary>
+
+Example code for the first two boards is available at
+`verilog/live_sim/ex_classic` and `verilog/live_sim/ex_dotmatrix`. The
+calculator is way harder to make an example for without "giving it away" but a
+non-runnable template is at `verilog/live_sim/ex_calculator` and a GIF
+of my program (which did not implement division) is included at the top of this
+README.
+
+**Classic board**
+This board is based on the real devkit formerly used for WPI's course. It has:
+* Four red seven-segment digits
+(controlled with active-low pattern and digit select signals)
+* A row of 16 on-off switches, aligned with a row of 16 green "LEDs"
+* 5 buttons in a plus shape, multiple of which can be pressed if clicked while
+holding shift
+* A 30 Hz clock (60 frames per second)
+
+**Dot-matrix board**
+This board is the same as the classic, except the seven-segment display is
+replaced with a four-digit "dot matrix" display. Each digit is 3x7 pixels.
+It is active-high for the digit-select and pattern signals. It also uses twice
+as fast a clock to reduce flickering.
+
+**Calculator board**
+This board has a dot-matrix display like the previous board, but replaces
+the controls with the layout of a four-function calculator. Its display is
+3x5 pixels per digit. This is an example of what can be made for specific
+assignments and projects that use the software. Modifying it to have more
+or less buttons, more digits, and/or differently shaped digits would not be
+hard for a moderately experienced programmer.
+
+</details>
+
 
 Write Verilog or SystemVerilog code with the same inputs and outputs as the
 examples, and compile it with the `build_live_sim <input_directory> <simulator>`
@@ -361,9 +389,8 @@ like in a real shell.
 Starting with v2, this program can support multiple live simulator boards
 without needing a new Docker image. Currently, this requires some knowledge of
 Python and a little knowledge of Qt, with new simulators needing two parts:
-* A Python script of any name, stored in the python folder. Base this on
-either `gui__dotmatrix.py` or `gui__classic.py`, both of which are quite
-similar to each other.
+* A Python script of any name, stored in the python folder. Base this on one
+of the provided boards.
 * New entries in the `simulators_map` and `simulator_ports` dictionaries
 within `client__shell.py`. The former just points to the new file's name via a
 one-word alias, while the latter is a dictionary listing the names and widths
