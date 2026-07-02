@@ -654,7 +654,6 @@ if __name__ == "__main__":
         }
 
         # covers the original constraints file's names for suggestions
-        # dp is the most important because v1 also had it lowercase
         port_aliases = {
             "UB": ["btnU"],
             "DB": ["btnD"],
