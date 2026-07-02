@@ -649,7 +649,7 @@ if __name__ == "__main__":
         
         simulator_ports = {
             "classic": ({'clk': 1, 'UB': 1, 'DB': 1, 'LB': 1, 'RB': 1, 'CB': 1, 'switches': 16}, {'segment': 7, 'dp': 1, 'anode': 4, 'lights': 16}),
-            "dotmatrix": ({'clk': 1, 'UB': 1, 'DB': 1, 'LB': 1, 'RB': 1, 'CB': 1, 'switches': 16}, {'select': 4, 'matrix': 21}),
+            "dotmatrix": ({'clk': 1, 'UB': 1, 'DB': 1, 'LB': 1, 'RB': 1, 'CB': 1, 'switches': 16}, {'select': 4, 'matrix': 21, 'lights': 16}),
             "calculator": ({'clk': 1, 'b0': 1, 'b1': 1, 'b2': 1, 'b3': 1, 'b4': 1, 'b5': 1, 'b6': 1, 'b7': 1, 'b8': 1, 'b9': 1, 'equals': 1, 'clear': 1, 'divide': 1, 'multiply': 1, 'subtract': 1, 'add': 1}, {'select': 4, 'matrix': 15}),
         }
 

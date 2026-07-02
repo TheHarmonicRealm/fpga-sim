@@ -8,7 +8,6 @@ import sys
 import threading
 from typing import TypedDict
 
-from colorama import Fore, Style
 from gui__base import BaseGUIWindow
 from gui__util import reconstruct_socket_unix, reconstruct_socket_windows
 from gui__widgets import (

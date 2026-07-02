@@ -8,7 +8,6 @@ import sys
 import threading
 from typing import TypedDict
 
-from colorama import Fore, Style
 from gui__base import BaseGUIWindow
 from gui__util import reconstruct_socket_unix, reconstruct_socket_windows
 from gui__widgets import (
@@ -28,6 +27,7 @@ class OutputDict(TypedDict, total=True):
     # total so this lies to the type checker to make set_output_state not busy
     select: int
     matrix: int
+    lights: int
 
 class InputDict(TypedDict, total=False):
     # non-total to allow sending just diffs up
@@ -42,11 +42,12 @@ class MainWindow(BaseGUIWindow):
     def __init__(self, program_name: str, sock: socket.socket, listener_done: threading.Event, have_quit: threading.Event):
         super().__init__(sock, listener_done, have_quit, program_name, "dot matrix", target_fps=120, sleep_resolution=.00005)
 
-        self.output_state = OutputDict(matrix=0, select=0)
+        self.output_state = OutputDict(matrix=0, select=0, lights=0)
         self.input_state = InputDict(UB=0, DB=0, LB=0, RB=0, CB=0, switches=0)
 
         self.plus_buttons = BoardComponents.Buttons(self.shift_pressed)
         self.four_digits = BoardComponents.DotMatrixGroup(4, 3, 7)
+        self.lights_line = BoardComponents.Lights()
         self.switches_line = BoardComponents.Switches()
 
         self.input_widgets += [self.plus_buttons, self.switches_line]
@@ -66,6 +67,7 @@ class MainWindow(BaseGUIWindow):
         self.model_interaction_box.addLayout(
             vbox_factory(
                 hbox_factory(self.plus_buttons, self.four_digits),
+                self.lights_line,
                 self.switches_line,
                 
             )
@@ -79,6 +81,7 @@ class MainWindow(BaseGUIWindow):
     @Slot(object)
     def set_output_state(self, new_output_state: OutputDict):
         self.output_state.update(new_output_state)
+        self.lights_line.set_output_state(self.output_state["lights"])
         self.four_digits.set(self.output_state["matrix"], self.output_state["select"])
 
     def update_input_state(self, *, buttons: int | None = None, switches: int | None = None):
