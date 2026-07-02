@@ -40,7 +40,7 @@ class InputDict(TypedDict, total=False):
 
 class MainWindow(BaseGUIWindow):
     def __init__(self, program_name: str, sock: socket.socket, listener_done: threading.Event, have_quit: threading.Event):
-        super().__init__(sock, listener_done, have_quit, program_name, "dot matrix")
+        super().__init__(sock, listener_done, have_quit, program_name, "dot matrix", target_fps=120, sleep_resolution=.00005)
 
         self.output_state = OutputDict(matrix=0, select=0)
         self.input_state = InputDict(UB=0, DB=0, LB=0, RB=0, CB=0, switches=0)

@@ -52,7 +52,7 @@ class InputDict(TypedDict, total=False):
 
 class MainWindow(BaseGUIWindow):
     def __init__(self, program_name: str, sock: socket.socket, listener_done: threading.Event, have_quit: threading.Event):
-        super().__init__(sock, listener_done, have_quit, program_name, "calculator", show_reset = False)
+        super().__init__(sock, listener_done, have_quit, program_name, "calculator", show_reset = False, target_fps=120, sleep_resolution=.00005)
 
         self.output_state = OutputDict(matrix=0, select=0)
         self.input_state = InputDict(B0 = 0, B1 = 0, B2 = 0, B3 = 0, B4 = 0, B5 = 0, B6 = 0, B7 = 0, B8 = 0, B9 = 0, equals = 0, clear = 0, divide = 0, multiply = 0, subtract = 0, add = 0)
