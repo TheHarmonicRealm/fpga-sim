@@ -78,18 +78,8 @@ class MainWindow(BaseGUIWindow):
 
     @Slot(object)
     def set_output_state(self, new_output_state: OutputDict):
-        # NOTE: if new_output_state adds keys or is missing some will not error
-        # Must become job of another component program to verify that the
-        # Verilog program's ports match the GUI program's ports
         self.output_state.update(new_output_state)
-        try:
-            self.four_digits.set(self.output_state["matrix"], self.output_state["select"])
-        except KeyError: # NOTE: see above... this will never happen currently
-            print("Error: your verilog code's inputs and/or outputs did not match the required format for the \"classic\" board.")
-            print(f"Please refer to the template at {Fore.CYAN}{Style.BRIGHT}./templates/classic.v{Style.RESET_ALL} if this is the board you meant to use.")
-             # TODO: do this in a smarter way, matching sizes too,
-             # and find a way to also match port widths
-            QApplication.quit()
+        self.four_digits.set(self.output_state["matrix"], self.output_state["select"])
 
     def update_input_state(self, *, buttons: int | None = None, switches: int | None = None):
         if buttons is not None:
