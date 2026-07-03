@@ -9,13 +9,16 @@ import socket
 import subprocess
 import sys
 import time
+import tomllib
 from argparse import ArgumentParser
 from enum import Enum, auto
 from pathlib import Path
 from sys import argv
+from tomllib import TOMLDecodeError
 from typing import IO, NoReturn
 
 from client__paths import (
+    board_data,
     docker_tag_filepath,
     live_sim_folder,
     settings_filepath,
@@ -52,6 +55,7 @@ from shared__util import (
     send_message,
     serialize_dataclass,
 )
+
 
 def prompt_Y_n(warning: str, verb: str):
     print(warning_title(), warning)
@@ -189,7 +193,7 @@ def print_build_errors(error_dicts_str: str, canonical_input: dict[str, int], ca
 def build_live_sim(input_files: list[NamedFile], folder_name: str, mode: str):
     global sock, compiled_program, current_sim, live_sim_hash
 
-    if mode not in simulators_map.keys():
+    if mode not in simulator_data:
         raise ContinueException(f"There is no simulator named {mode}")
     
     # check if any file seems to contain a call to $write and warn if so
@@ -217,7 +221,7 @@ def build_live_sim(input_files: list[NamedFile], folder_name: str, mode: str):
     print("Generating header...", end="", flush=True)
 
 
-    command = BuildLiveCommand(input_files, *simulator_ports[mode])
+    command = BuildLiveCommand(input_files, simulator_data[mode]["inputs"], simulator_data[mode]["outputs"])
     t0 = time.time()
     t1 = t0
     send_command(command)
@@ -252,7 +256,7 @@ def build_live_sim(input_files: list[NamedFile], folder_name: str, mode: str):
             "its top module's inputs and outputs did not match this simulator's "
             "required list; see a working example at "
             f"{Fore.CYAN}{Style.BRIGHT}./verilog/live_sim/ex_{mode}/top.v{Style.RESET_ALL}.")
-            print_build_errors(content, *simulator_ports[mode])
+            print_build_errors(content, simulator_data[mode]["inputs"], simulator_data[mode]["outputs"])
             return False
         case AckMessage():
             pass
@@ -293,9 +297,9 @@ def start_live_sim():
             print(f"Prints from the Verilog model will be indented and {Fore.BLUE}{Style.BRIGHT}bold blue{Style.RESET_ALL}!")
             # Run gui in a subprocess (fork) and give it the socket we already have
             if sys.platform != 'win32':
-                subprocess.run(["uv", "run", f"./python/{simulators_map[current_sim]}", compiled_program, f"{sock.fileno()}"], close_fds=False)
+                subprocess.run(["uv", "run", f"./python/{simulator_data[current_sim]["path"]}", compiled_program, f"{sock.fileno()}"], close_fds=False)
             else: # Windows requires fancy code; must use Popen because child must receive input after its creation
-                live_sim_process = subprocess.Popen(["uv", "run", f"./python/{simulator_filename}", compiled_program], stdin=subprocess.PIPE, close_fds=False)
+                live_sim_process = subprocess.Popen(["uv", "run", f"./python/{simulator_data[current_sim]["path"]}", compiled_program], stdin=subprocess.PIPE, close_fds=False)
                 child_pipe: IO[bytes] = live_sim_process.stdin # pyright: ignore[reportAssignmentType]
                 shareable_socket = sock.share(live_sim_process.pid)
                 child_pipe.write(base64.b64encode(shareable_socket))
@@ -359,10 +363,9 @@ class BuildLiveSimCompleter(Completer):
         if args_length == 0:
             yield from FolderNameCompleter(live_sim_folder).get_completions(document, complete_event)
         elif args_length == 1:
-            yield from WordCompleter(list(simulators_map.keys())).get_completions(document, complete_event)
+            yield from WordCompleter(list(simulator_data.keys())).get_completions(document, complete_event)
            
 def main_command_completer():
-    global simulators_map
     return NestedCompleter.from_nested_dict(
         {
             "waveform_sim": WaveformSimCompleter(),
@@ -670,34 +673,18 @@ if __name__ == "__main__":
 
         signal.signal(signal.SIGINT, signal.SIG_IGN) # ignore ctrl-C
 
+        try:
+            full_simulators_toml = tomllib.loads(board_data.read_text())
+        except TOMLDecodeError, ValueError:
+            error_exit(f"{clickable_filepath(board_data, 2)} is corrupted.",
+            hint="Unless you intended  to tweak the live simulation boards, "
+            "that file should not be modified and you should revert all "
+            "changes to it.")
 
-        # TODO: store in a more user-serviceable way one day
-        # or at least just store better, this is very temporary
-        simulators_map = {
-            "classic": "gui__full_board.py",
-            "dotmatrix": "gui__dotmatrix.py",
-            "calculator": "gui__calculator.py",
-        }
-        
-        simulator_ports = {
-            "classic": ({'clk': 1, 'UB': 1, 'DB': 1, 'LB': 1, 'RB': 1, 'CB': 1, 'switches': 16}, {'segment': 7, 'dp': 1, 'anode': 4, 'lights': 16}),
-            "dotmatrix": ({'clk': 1, 'UB': 1, 'DB': 1, 'LB': 1, 'RB': 1, 'CB': 1, 'switches': 16}, {'select': 4, 'matrix': 21, 'lights': 16}),
-            "calculator": ({'clk': 1, 'b0': 1, 'b1': 1, 'b2': 1, 'b3': 1, 'b4': 1, 'b5': 1, 'b6': 1, 'b7': 1, 'b8': 1, 'b9': 1, 'equals': 1, 'clear': 1, 'divide': 1, 'multiply': 1, 'subtract': 1, 'add': 1}, {'select': 4, 'matrix': 15}),
-        }
+        simulator_data = full_simulators_toml["boards"]
 
         # covers the original constraints file's names for suggestions
-        port_aliases = {
-            "UB": ["btnU"],
-            "DB": ["btnD"],
-            "LB": ["btnL"],
-            "RB": ["btnR"],
-            "CB": ["btnC"],
-            "dp": ["DP"],
-            "switches": ["sw"],
-            "lights": ["LED"],
-            "anode": ["an"],
-            "segment": ["seg"],
-        }
+        port_aliases = full_simulators_toml["port_aliases"]
 
         # sets up readline-like behavior and selects completer
         sesh = PromptSession("> ", enable_history_search=True, complete_while_typing=False, completer=main_command_completer(), complete_style=CompleteStyle.READLINE_LIKE, history=InMemoryHistory())
