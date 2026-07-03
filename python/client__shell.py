@@ -649,6 +649,8 @@ if __name__ == "__main__":
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # disable Nagle's algorithm. was a HUGE headache when testing v2
+        sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         sock.set_inheritable(True)
         try:
             sock.connect(("127.0.0.1", socket_port))

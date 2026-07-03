@@ -256,6 +256,8 @@ if __name__ == "__main__":
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_sock:
         server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # disable Nagle's algorithm. was a HUGE headache when testing v2
+        server_sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
 
         if i_am_a_docker:
             server_sock.bind(("0.0.0.0", 9834))
