@@ -45,12 +45,11 @@ more advanced computer skills to set up.
 * **Windows**:
     * Windows 11 version 22H2 (build 22631) or higher
     * Windows 10 version 22H2 (build 19045) or higher
-        * Windows 10 Personal is not officially supported but I have heard from
-        students it works without any issues.
         * Docker supports the currently-serviced versions of Windows
         (see [Docker's Windows requirements](https://docs.docker.com/desktop/setup/install/windows-install/#system-requirements)),
         which do not include standard Windows 10 Personal, but I have heard from some
         students that it works without issue.
+            * To be clear, I do not endorse using Windows 10 without security updates.
     * At least 8GB of RAM.
         * It may be possible to configure WSL2 to use less RAM and run Docker
         on under 8GB.
@@ -73,17 +72,22 @@ If any of these are already on your computer, there is no need to reinstall
 them. If you want, you can install the required software yourself then skip to
 step 7.
 
-* git to download the code
+* [git](https://git-scm.com/install/) to download the code
     * Check if you have it: run `git --version` in your terminal
-* uv to manage Python
+* [uv](https://docs.astral.sh/uv/getting-started/installation/) to manage Python
     * Check if you have it: run `uv --version` in your terminal
 * Docker, which is how the software backend runs in an Ubuntu VM
-* Visual Studio Code or another IDE, including extensions for a Verilog syntax
+    * Windows/Mac: [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+    * Linux: [Docker Engine](https://docs.docker.com/engine/install/)
+* [Visual Studio Code](https://code.visualstudio.com/) or another IDE, including extensions for a Verilog syntax
 highlighter
+    * [Recommended VSCode Verilog syntax highlighter](https://marketplace.visualstudio.com/items?itemName=eirikpre.systemverilog)
 * A waveform viewer
-    * This program supports automaticaly opening with VSCode's VaporView
-    extension, GTKWave, or Surfer, but any program that can open .vcd files can
-    be used manually
+    * This program supports automaticaly opening with VSCode's
+    [VaporView](https://marketplace.visualstudio.com/items?itemName=lramseyer.vaporview)
+    extension, [GTKWave](https://gtkwave.github.io/gtkwave/index.html),
+    or [Surfer](https://gitlab.com/surfer-project/surfer), but any program that
+    can open .vcd files can be used manually
 * Linux users: if you happen to have not run a Qt app before, you may be
 required to install a package when you try to run live simulation.
 
