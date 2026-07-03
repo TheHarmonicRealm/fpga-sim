@@ -766,8 +766,8 @@ if __name__ == "__main__":
                     case "help" | "?" | "-h":
                         # TODO: store command help in a reasonable way
                         print("Available commands: \n* build_live_sim <folder>\n* waveform_sim <folder> <filename.vcd> [-overwrite]\n* start_live_sim\n* exit")
-                    case "clear" if sys.platform == 'win32':
-                        # not needed on Mac (use ⌘K!) but nice on Windows
+                    case "clear" if sys.platform == 'win32' or sys.platform == 'linux':
+                        # not needed on Mac (use ⌘K!) but nice on the others
                         clear()
                         print() # extra line to push it down
                     case _:
