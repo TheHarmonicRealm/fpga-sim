@@ -192,12 +192,27 @@ def build_live_sim(input_files: list[NamedFile], folder_name: str, mode: str):
     if mode not in simulators_map.keys():
         raise ContinueException(f"There is no simulator named {mode}")
     
-    for file in input_files:
-        if "$write" in file.content:
-            if not prompt_y_N(f"input file {file.name} appears to contain a $write "
-                "call; if your program prints output without a newline at the "
-                "end, it is very likely to crash this app.", "Build"):
-                return False
+    # check if any file seems to contain a call to $write and warn if so
+    # TODO: write a cool function to more elegantly turn a list into a phrase
+    
+    dollars_write_files = [f.name for f in input_files if "$write" in f.content]
+
+    if len(dollars_write_files) == 0:
+        pass
+    elif len(dollars_write_files) == 1:
+        if not prompt_y_N(f"input file {dollars_write_files[0]} appears to contain a $write "
+            "call; if your program prints output without a newline at the "
+            "end, it is very likely to crash this app.", "Build"):
+            return False
+    else: # multiple files: print all their names in a nice list
+        list_str = ", ".join(dollars_write_files[0:-1]) # all but last one
+        if len(dollars_write_files) > 2:
+            list_str += "," # Oxford comma
+        list_str += f" and {dollars_write_files[-1]}"
+        if not prompt_y_N(f"input files {list_str} appear to contain $write "
+            "calls; if your program prints output without a newline at the "
+            "end, it is very likely to crash this app.", "Build"):
+            return False
 
     print("Generating header...", end="", flush=True)
 
