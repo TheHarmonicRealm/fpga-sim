@@ -328,9 +328,7 @@ Each provides a clock signal.
 Example code for the first two boards is available at
 `verilog/live_sim/ex_classic` and `verilog/live_sim/ex_dotmatrix`. The
 calculator is way harder to make an example for without "giving it away" but a
-non-runnable template is at `verilog/live_sim/ex_calculator` and a GIF
-of my program (which did not implement division) is included at the top of this
-README.
+non-runnable template is at `verilog/live_sim/ex_calculator`.
 
 **Classic board**
 This board is based on the real devkit formerly used for WPI's course. It has:
@@ -406,12 +404,11 @@ like in a real shell.
 Starting with v2, this program can support multiple live simulator boards
 without needing a new Docker image. Currently, this requires some knowledge of
 Python and a little knowledge of Qt, with new simulators needing two parts:
-* A Python script of any name, stored in the python folder. Base this on one
+* A Python script of any name (though I recommend naming it like the others,
+prefaced with `gui__`) stored in the `python` folder. Base this on one
 of the provided boards.
-* New entries in the `simulators_map` and `simulator_ports` dictionaries
-within `client__shell.py`. The former just points to the new file's name via a
-one-word alias, while the latter is a dictionary listing the names and widths
-of every port.
+* New entries in the `board_data.toml` file to point to the file and list the
+widths of the new board's input and output ports.
 
 ## Updating the software
 
