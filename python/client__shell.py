@@ -39,7 +39,7 @@ from prompt_toolkit.completion import (
 from prompt_toolkit.document import Document
 from prompt_toolkit.history import InMemoryHistory
 from prompt_toolkit.key_binding import KeyBindings, KeyPressEvent
-from prompt_toolkit.shortcuts import CompleteStyle
+from prompt_toolkit.shortcuts import CompleteStyle, clear
 from shared__util import (
     AckMessage,
     AnyCommand,
@@ -766,6 +766,10 @@ if __name__ == "__main__":
                     case "help" | "?" | "-h":
                         # TODO: store command help in a reasonable way
                         print("Available commands: \n* build_live_sim <folder>\n* waveform_sim <folder> <filename.vcd> [-overwrite]\n* start_live_sim\n* exit")
+                    case "clear" if sys.platform == 'win32':
+                        # not needed on Mac (use ⌘K!) but nice on Windows
+                        clear()
+                        print() # extra line to push it down
                     case _:
                         print("Unrecognized command")
             except ContinueException as e:
