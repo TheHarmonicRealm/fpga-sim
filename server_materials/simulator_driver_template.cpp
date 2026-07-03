@@ -27,30 +27,6 @@
 // TODO: remove if I decide to only support running in Linux container [pretty likely]
 double sc_time_stamp() { return 0; }
 
-//Communication protocol: strings of name,state
-//State is 16 ASCII 1/0
-//Name is variable length matching these names:
-
-    /* ports
-        input                UB
-        input                DB
-        input                LB
-        input                RB
-        input                CB
-        input [15:0]         switches
-
-        output [6:0]         segment
-        output               dp
-        output [3:0]         anode
-        output [15:0]        lights
-    */
-
-/*
-    Each loop, each outputitem's update function is called.
-    If it returns a value, that means the output it wraps has changed,
-    and the new state should be sent to client (i.e. printed to stdout)
-*/
-
 void update_inputs(const std::string& input_string, std::unordered_map<std::string, PortReference> ports_map) {
     // Make dict of names to values for all things listed in input
     auto update_dict = py_string_to_map(input_string);
