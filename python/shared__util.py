@@ -5,8 +5,10 @@ import ast
 import dataclasses as dc
 import os
 import socket
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
+import textwrap
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -96,6 +98,8 @@ class NamedFile:
 @dataclass
 class BuildLiveCommand:
     files: list[NamedFile]
+    expected_inputs: dict[str, int]
+    expected_outputs: dict[str, int]
 
     CODE: ClassVar[str] = "BL"
 
@@ -182,3 +186,28 @@ def receive_error_or_ack(sock: socket.socket):
                 raise ValueError(header)
         message = big_receive(sock).decode()
         return deserialize_dataclass(message, dc_type)
+    
+def bool_list_to_int(bl: list[bool]):
+    return sum(int(b) << i for i, b in enumerate(reversed(bl)))
+
+def int_to_bool_list(num: int, width: int, *, invert: bool = False):
+    partial_list = [bool(int(c)) for c in bin(num)[2:]]
+    false_prefix = [False] * (width - len(partial_list))
+    if not invert:
+        return false_prefix + partial_list
+    else:
+        return [not x for x in (false_prefix + partial_list)]
+
+def dict_diff[T: Mapping](new: T, old: T) -> T:
+    '''Assumes: new and old have all the same keys. Returns a dict with only
+    the changed key-vals. Sadly: cannot require old and new to have the same
+    exact type — just matches their supertypes — so type-checker will not get
+    mad if this is passed a dict and a TypedDict.'''
+    if difference := new.items() - old.items():
+        return dict(difference)
+    else:
+        return {}
+    
+def indent_text(in_str: str, depth: int=1):
+    '''indents x number of 4-space "tabs"'''
+    return textwrap.indent(in_str, (" " * 4) * depth)

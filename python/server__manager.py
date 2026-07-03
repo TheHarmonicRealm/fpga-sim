@@ -1,18 +1,14 @@
 import ast
-import dataclasses as dc
 import shutil
 import socket
 import subprocess
+import textwrap
 from os import environ
 from pathlib import Path
 from string import Template
 from typing import IO
 
-from gui__states import (  # For live sim loop
-    OutputState,
-    WholeInputState,
-    WholeOutputState,
-)
+import extract_ports
 from shared__util import (
     AckMessage,
     BadHeader,
@@ -30,29 +26,19 @@ from shared__util import (
     serialize_dataclass,
 )
 
+try:
+    from colorama import Fore, Style  # TODO: make it lazy import in the future
+    colorama_available = True
+except ModuleNotFoundError:
+    colorama_available = False
+
+msg_dict = dict[str, int]
+
+def deserialize_dict(d: str) -> msg_dict:
+    return ast.literal_eval(d)
+
 executable_path = Path("./obj_dir/Vtop")
-
-def bool_list_to_int(bl: list[bool]):
-    return sum(int(b) << i for i, b in enumerate(reversed(bl)))
-
-def int_to_bool_list(num: int, width: int, *, invert: bool = False):
-    partial_list = [bool(int(c)) for c in bin(num)[2:]]
-    false_prefix = [False] * (width - len(partial_list))
-    if not invert:
-        return false_prefix + partial_list
-    else:
-        return [not x for x in (false_prefix + partial_list)]
-
-def flat_input_dict(input_state: WholeInputState) -> dict[str, int]:
-    switches: list[bool] = list(dc.asdict(input_state.switches).values())
-    return {
-        "UB": int(input_state.buttons.BTNU),
-        "DB": int(input_state.buttons.BTND),
-        "LB": int(input_state.buttons.BTNL),
-        "RB": int(input_state.buttons.BTNR),
-        "CB": int(input_state.buttons.BTNC),
-        "Switches": bool_list_to_int(switches)
-    }
+backup_executable_path = Path("./executable_backup")
 
 def live_sim(sock: socket.socket):
     global executable_path
@@ -75,77 +61,80 @@ def live_sim(sock: socket.socket):
                 print("Client requested live sim exit")
                 send_message("exit", conn)
                 print("Returning to main command loop")
+                # kill subprocess. Telling it to terminate then wait() doesn't seem to work?
+                process.kill()
                 break
-            case "": # Give sim process empty line to indicate no new input
-                input_string = ""
+            case "": # Received empty: paused
+                continue
             case _: # Otherwise input must be dataclass string
                 try: # Try to convert; if it fails print error rather than crash
-                    as_dc = deserialize_dataclass(inp, WholeInputState)
-                    if type(as_dc) != WholeInputState:
-                        raise RuntimeError(f"{as_dc} is not InputState!")
-                    input_string = str(flat_input_dict(as_dc))
-                except Exception as e:
-                    print(f"Failure with input {inp}: e")
+                    input_string = str(deserialize_dict(inp))
+                except ValueError as e:
+                    send_message(f"Failure with input {inp}: e", conn)
                     continue
 
         in_pipe.write(input_string + "\n")
         in_pipe.flush()
 
-        output_string = out_pipe.readline().strip()
-        is_system_string = output_string.startswith("secretkey")
-        if is_system_string:
-            output_string = output_string[len("secretkey"):]
-            if output_string == "":
-                continue
-            else:
-                output_dict: dict[str, int] = ast.literal_eval(output_string)
-                new_segment = list(reversed(int_to_bool_list(output_dict["Segment"], 7, invert=True))) # FPGA is G-A
-                new_dp = int_to_bool_list(output_dict["DP"], 1, invert=True)
-                new_anode = int_to_bool_list(output_dict["Anode"], 4, invert=True)
-                new_lights = int_to_bool_list(output_dict["Lights"], 16)
+        verilog_prints: list[str] = []
+        system_update_string: str = ""
 
-                output_state = WholeOutputState(
-                    lights=OutputState.Lights(*new_lights),
-                    anode=OutputState.Anode(*new_anode),
-                    cathode=OutputState.Cathode(*(new_segment + new_dp)),
-                )
-                # print(f"Shell: Sending {output_state}")x
-                send_message(serialize_dataclass(output_state), conn)
-        elif not i_am_a_docker: # TODO: get to user if in docker!
-            print(output_string)
+        while True:
+            # receive strings until we get a system string
+            # we know system string is last because model eval is what triggers
+            # display prints and is called before sending state
+            output_string = out_pipe.readline().strip()
+            if output_string.startswith("secretkey"):
+                system_update_string = output_string[len("secretkey"):]
+                break
+            else:
+                if not i_am_a_docker:
+                    m = textwrap.indent(output_string, " " * 4)
+                    if colorama_available:
+                        print(f"{Fore.BLUE}{Style.BRIGHT}{m}{Style.RESET_ALL}")
+                    else:
+                        print(m)
+                verilog_prints.append(output_string)
+
+        send_message(repr(verilog_prints), sock)
+        send_message(system_update_string, sock)
     # TODO: properly close process. Writing "exit\n" and calling process.wait() hangs forever...
 
-def try_make(files: list[NamedFile]):
-    '''Runs make with the given list of NamedFiles, saving them to
-    a folder first. Assumes that the client has checked that there is one
-    called top.v.'''
+def verify_ports(candidate_input: dict[str, int], candidate_output: dict[str, int], canonical_input: dict[str, int], canonical_output: dict[str, int]):
+    i_extra_ports: dict[str, int] = {}
+    i_wrong_length_ports: dict[str, int] = {}
+    i_missing_ports: dict[str, int] = {}
+    
+    o_extra_ports: dict[str, int] = {}
+    o_wrong_length_ports: dict[str, int] = {}
+    o_missing_ports: dict[str, int] = {}
 
-    names = [file.name for file in files]
-    try:
-        names.remove("top.v")
-    except ValueError:
-        return ErrorMessage(f"Lacking a top.v. Client should have caught this.")
-    names.insert(0, "top.v") # put at front to indicate top to Verilator
+    dicts = [i_extra_ports, i_wrong_length_ports, i_missing_ports, o_extra_ports, o_wrong_length_ports, o_missing_ports]
 
-    for file in files:
-        file.to_disk(Path("./user_inputs"))
+    for port, width in candidate_input.items():
+        if not port in canonical_input:
+            i_extra_ports[port] = width
+        elif width != canonical_input[port]:
+            i_wrong_length_ports[port] = width
 
-    # List is passed in as an environment variable
-    # Server passes -I./user_inputs so it can find these files by name
-    filenames_str = " ".join(names)
-    envvars = environ.copy() | {"COMPILE_FILES": filenames_str, "CXXFLAGS": "-fdiagnostics-color"}
+    for port, width in candidate_output.items():
+        if not port in canonical_output:
+            o_extra_ports[port] = width
+        elif width != canonical_output[port]:
+            o_wrong_length_ports[port] = width
 
-    # This and the CXXFLAGS make it so that errors' colors are preserved; the
-    #   commands otherwise know they are not in a terminal and strip them
-    #   Not sure why the env var is also needed (in real terminal it isn't)
-    proc = subprocess.run(["make"], stderr=subprocess.PIPE, env=envvars)
+    for port, width in canonical_input.items():
+        if port not in candidate_input:
+            i_missing_ports[port] = width
 
-    match proc.returncode:
-        case 0:
-            return AckMessage()
-        case other:
-            return ErrorMessage(f"\n\n{proc.stderr.decode()}")
-        
+    for port, width in canonical_output.items():
+        if port not in candidate_output:
+            o_missing_ports[port] = width
+
+    if any(len(d) > 0 for d in dicts):
+        return ErrorMessage(repr(dicts))
+    else:
+        return AckMessage()
 def try_waveform_run(name: str, files: list[NamedFile]):
     names = [file.name for file in files]
     try:
@@ -200,16 +189,75 @@ def waveform_sim(sock: socket.socket, name: str, files: list[NamedFile]):
             send_message(serialize_dataclass(output_file), sock) # pyright: ignore[reportArgumentType]
 
 
-def build_live(sock: socket.socket, files: list[NamedFile]):
-    result = try_make(files)
-    sock.send(result.CODE.encode())
-    send_message(serialize_dataclass(result), sock)
+def build_live(sock: socket.socket, files: list[NamedFile], expected_inputs: dict[str, int], expected_outputs: dict[str, int]):
+    # Tries to make Verilog header. If it works, checks ports.
+    # Only if that works does it compile — therefore the executable is not
+    # overwritten with one for a correct but unusable program
+
+    names = [file.name for file in files]
+    try:
+        names.remove("top.v")
+    except ValueError:
+        return ErrorMessage(f"Lacking a top.v. Client should have caught this.")
+    names.insert(0, "top.v") # put at front to indicate top to Verilator
+
+    for file in files:
+        file.to_disk(Path("./user_inputs"))
+
+    # List is passed in as an environment variable
+    # Server passes -I./user_inputs so it can find these files by name
+    filenames_str = " ".join(names)
+    envvars = environ.copy() | {"COMPILE_FILES": filenames_str, "CXXFLAGS": "-fdiagnostics-color"}
+
+    proc = subprocess.run(["make", "generate_code"], stderr=subprocess.PIPE, env=envvars)
+
+    match proc.returncode:
+        case 0:
+            # continue to generating exe
+            sock.send(AckMessage().CODE.encode())
+            send_message(serialize_dataclass(AckMessage()), sock)
+        case _:
+            e = ErrorMessage(f"\n\n{proc.stderr.decode()}")
+            sock.send(e.CODE.encode())
+            send_message(serialize_dataclass(e), sock)
+            return False
+        
+    input_ports, output_ports = extract_ports.ports_dicts(Path("./obj_dir/Vtop.h"))
+
+    check = verify_ports(input_ports, output_ports, expected_inputs, expected_outputs)
+
+    match check:
+
+        case AckMessage():
+            sock.send(AckMessage().CODE.encode())
+            send_message(serialize_dataclass(AckMessage()), sock)
+        case ErrorMessage(_):
+            sock.send(check.CODE.encode())
+            send_message(serialize_dataclass(check), sock)
+            return False
+        
+    extract_ports.write_driver(Path("./simulator_driver_template.cpp"), Path("./simulator_driver_generated.cpp"), input_ports, output_ports)
+
+    proc = subprocess.run(["make", "finish_build"], stderr=subprocess.PIPE, env=envvars)
+
+    match proc.returncode:
+        case 0:
+            sock.send(AckMessage().CODE.encode())
+            send_message(serialize_dataclass(AckMessage()), sock)
+            return True
+        case _:
+            e = ErrorMessage(f"\n\n{proc.stderr.decode()}")
+            sock.send(e.CODE.encode())
+            send_message(serialize_dataclass(e), sock)
+            return False
 
 if __name__ == "__main__":
     i_am_a_docker = "FPGA_DOCKER_SERVER" in environ
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_sock:
         server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # disable Nagle's algorithm. was a HUGE headache when testing v2
+        server_sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
 
         if i_am_a_docker:
             server_sock.bind(("0.0.0.0", 9834))
@@ -260,12 +308,9 @@ if __name__ == "__main__":
             # print(command)
 
             match command:
-                case BuildLiveCommand(files):
-                    build_live(conn, files)
-                    pass
+                case BuildLiveCommand(files, expected_inputs, expected_outputs):
+                    build_live(conn, files, expected_inputs, expected_outputs)
                 case StartLiveCommand():
                     live_sim(conn)
-                    pass
                 case WaveformSimCommand(name, files):
                     waveform_sim(conn, name, files)
-                    pass

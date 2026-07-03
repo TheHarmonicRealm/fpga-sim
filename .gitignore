@@ -3,6 +3,7 @@ __pycache__/
 host_server/
 docker_cache/
 python/waveform_viewer_choice.txt
+server_materials/Vtop.h
 
 # Allow examples in these
 waveforms/*

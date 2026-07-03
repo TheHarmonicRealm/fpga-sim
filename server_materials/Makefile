@@ -29,10 +29,11 @@ endif
 #	without needing to terminate linting/elaboration completely
 lint_flags = --lint-only -Werror-NULLPORT -I./user_inputs
 
-# Generate C++ in executable form
-VERILATOR_FLAGS += -cc --exe
+
 # Generate makefile dependencies (not shown as complicates the Makefile)
 VERILATOR_FLAGS += -MMD
+# Generate C++
+VERILATOR_FLAGS += -cc
 # Optimize
 VERILATOR_FLAGS += -x-assign fast
 # Warn abount lint issues; may not want this on less solid designs
@@ -42,28 +43,43 @@ VERILATOR_FLAGS += --assert
 # Generate coverage analysis
 VERILATOR_FLAGS += --coverage
 # Build it
-VERILATOR_FLAGS += --build
 # Make it look in ./user_inputs
 VERILATOR_FLAGS += -I./user_inputs
+VERILATOR_FLAGS += -CFLAGS -std=c++17
+
+
 
 # Input files for Verilator
-VERILATOR_INPUT = $(COMPILE_FILES) simulator_driver.cpp
+VERILATOR_INPUT = $(COMPILE_FILES)
+
+verilate_line := $(VERILATOR) $(VERILATOR_FLAGS) $(VERILATOR_INPUT)
+
+VERILATOR_INPUT += string_dict_tools.cpp port_ref.cpp simulator_driver_generated.cpp
+
+# Generate C++ in executable form
+VERILATOR_FLAGS += --exe
+VERILATOR_FLAGS += --build
+# Set stdlib to c++20, for <optional>
+# Ubuntu image's GCC doesn't need this, but Mac Clang uses c++14
+
+
+executable_line := $(VERILATOR) $(VERILATOR_FLAGS) $(VERILATOR_INPUT)
 
 ######################################################################
-default: build
 
-build:
+generate_code:
 	@echo
 	@echo "-- Verilator live sim build"
 	@echo
 	@echo "-- LINT ----------------"
 	$(VERILATOR) $(lint_flags) $(VERILATOR_INPUT)
 	@echo "-- VERILATE ----------------"
-	$(VERILATOR) $(VERILATOR_FLAGS) $(VERILATOR_INPUT)
+	$(verilate_line)
+	@echo "-- GENERATE_DRIVER_CODE ----------------"
 
-	@echo
-	@echo "-- BUILD -------------------"
-	$(MAKE) -j -C obj_dir -f ../Makefile_obj
+finish_build:
+	@echo "-- FINISH_VERILATION ----------------"
+	$(executable_line)
 
 	@echo
 	@echo "-- DONE --------------------"

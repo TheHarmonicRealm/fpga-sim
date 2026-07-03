@@ -6,21 +6,24 @@
         # If both must be fully built, they run in parallel. On my Mac this took
         # over an hour, vs 18 minutes total when I built the native one, then
         # ran this (which reuses the cache and thus skips the native one)
-    # docker buildx build --platform linux/amd64,linux/arm64 -t fpga-sim-server:v1 .
+    # docker buildx build --platform linux/amd64,linux/arm64 -t ghcr.io/theharmonicrealm/fpga-sim-server:v2 .
 
     #### Export images in ARM and x86 format after building
-    # docker image save --output fpga_sim_image_x86.tar fpga-sim-server --platform linux/amd64
-    # docker image save --output fpga_sim_image_ARM.tar fpga-sim-server --platform linux/arm64
+    # docker image save --output fpga_sim_image_x86.tar ghcr.io/theharmonicrealm/fpga-sim-server:v2 --platform linux/amd64
+    # docker image save --output fpga_sim_image_ARM.tar ghcr.io/theharmonicrealm/fpga-sim-server:v2 --platform linux/arm64
     
     #### Load the output of last command onto user machine
     # docker load -i fpga_sim_image_x86.tar
     # docker load -i fpga_sim_image_ARM.tar
 
-    #### Build image from the docker_cache folder for local use. Could be used if server code is very volatile to let users rebuild quickly, but just distributing tar is easier:
-    # docker buildx build --cache-to type=local,dest=./docker_cache --cache-from type=local,src=./docker_cache -t fpga-sim-server:v1 . 
+    #### Normal build for current platform
+    # docker buildx build -t ghcr.io/theharmonicrealm/fpga-sim-server:v2 .
 
-    #### Normal build (equivalent to the above command after first time, as the cache will be copied into the main cache)
-    # docker buildx build -t fpga-sim-server:v1 .
+    #### Push to GitHub:
+    #### Log in (enter PAT on password prompt)
+    # docker login ghcr.io -u TheHarmonicRealm
+    #### Push
+    # docker push ghcr.io/theharmonicrealm/fpga-sim-server:{current tag}
 
 FROM ubuntu:22.04@sha256:fed6ddb82c61194e1814e93b59cfcb6759e5aa33c4e41bb3782313c2386ed6df
 WORKDIR /usr/bin/
@@ -70,18 +73,19 @@ RUN make install
 # Download uv then Python
 RUN apt-get update && apt-get install -y --no-install-recommends curl
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+
+ENV PATH="/root/.local/bin:$PATH"
+
 # Updating path wasn't working so just use absolute one for the one uv call
-RUN /root/.local/bin/uv python install 3.14
+RUN uv python install 3.14
+
+
 
 WORKDIR /root/fpga-sim
 RUN mkdir user_inputs
 
-COPY python/gui__states.py python/shared__util.py .
-COPY server_materials/Makefile .
-COPY server_materials/Makefile_obj .
-COPY server_materials/simulator_driver.cpp .
-COPY server_materials/Waveform_Run.sh .
-COPY python/server__manager.py .
+COPY python/server__manager.py python/shared__util.py python/extract_ports.py .
+COPY --exclude=Vtop.h server_materials .
 
 EXPOSE 9834
 
@@ -92,4 +96,4 @@ ENV PYTHONUNBUFFERED=1
 # Used by server manager to know if it is in Docker or not
 ENV FPGA_DOCKER_SERVER="Yes this is the server"
 
-CMD ["/root/.local/bin/python3.14", "./server__manager.py"]
+CMD ["python3.14", "./server__manager.py"]

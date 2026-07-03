@@ -1,3 +1,4 @@
+import ast
 import base64
 import os
 import re
@@ -8,13 +9,16 @@ import socket
 import subprocess
 import sys
 import time
+import tomllib
 from argparse import ArgumentParser
 from enum import Enum, auto
 from pathlib import Path
 from sys import argv
-from typing import IO
+from tomllib import TOMLDecodeError
+from typing import IO, NoReturn
 
 from client__paths import (
+    board_data,
     docker_tag_filepath,
     live_sim_folder,
     settings_filepath,
@@ -35,7 +39,7 @@ from prompt_toolkit.completion import (
 from prompt_toolkit.document import Document
 from prompt_toolkit.history import InMemoryHistory
 from prompt_toolkit.key_binding import KeyBindings, KeyPressEvent
-from prompt_toolkit.shortcuts import CompleteStyle
+from prompt_toolkit.shortcuts import CompleteStyle, clear
 from shared__util import (
     AckMessage,
     AnyCommand,
@@ -46,11 +50,23 @@ from shared__util import (
     WaveformSimCommand,
     big_receive,
     deserialize_dataclass,
+    indent_text,
     receive_error_or_ack,
     send_message,
     serialize_dataclass,
 )
 
+
+def prompt_Y_n(warning: str, verb: str):
+    print(warning_title(), warning)
+    return prompt(f"{verb} anyway? [Y/n] ").strip().lower() not in ["n", "no"]
+
+def prompt_y_N(warning: str, verb: str):
+    print(warning_title(), warning)
+    return prompt(f"{verb} anyway? [y/N] ").strip().lower() in ["y", "yes"]
+
+def warning_title():
+    return f"{Fore.YELLOW}{Style.BRIGHT}Warning:{Style.RESET_ALL}"
 
 def error_title():
     return f"{Fore.RED}{Style.BRIGHT}Error:{Style.RESET_ALL}"
@@ -106,45 +122,184 @@ def waveform_sim(input_files: list[NamedFile], output_path: Path, folder_name: s
                 case None:
                     print(result_start, f"Saved output to {Style.BRIGHT}{Fore.CYAN}{clickable_filepath(output_path, 2)}{Style.RESET_ALL}")
 
-def build_live_sim(input_files: list[NamedFile], folder_name: str):
-    global sock
+def print_build_errors(error_dicts_str: str, canonical_input: dict[str, int], canonical_output: dict[str, int]):
+    # unpack from list. TODO: make this better with a dataclass or something
+    evald_list: list[dict[str, int]] = ast.literal_eval(error_dicts_str)
+    i_extra_ports, i_wrong_length_ports, i_missing_ports, o_extra_ports, o_wrong_length_ports, o_missing_ports = evald_list
 
-    command = BuildLiveCommand(input_files)
-    t1 = time.time()
+    errors_list: list[str | tuple[str, str]] = []
+
+    def format_port(port: str, width: int | None = None):
+        return f"\"{Style.BRIGHT}{port}{f":{width}" if width is not None else ""}{Style.RESET_ALL}\""
+    
+    def suggestion(content: str):
+        return f"{Style.BRIGHT}{Fore.GREEN}Suggestion:{Style.RESET_ALL} {content}"
+    
+    def bits(b: int):
+        return f"{b} bits" if b != 1 else f"{b} bit"
+
+    for port, width in i_extra_ports.items():
+        m = f"Unexpected input port {format_port(port, width)} was encountered."
+        m = f"Input {format_port(port, width)}: unexpected port."
+        errors_list.append(m)
+
+    for port, width in o_extra_ports.items():
+        m = f"Unexpected output port {format_port(port, width)} was encountered."
+        m = f"Output {format_port(port, width)}: unexpected port."
+        errors_list.append(m)
+
+    for port, width in i_wrong_length_ports.items():
+        m = (f"Input {format_port(port, None)}: {bits(width)} wide; "
+        f"expected {bits(canonical_input[port])}.")
+        errors_list.append(m)
+    
+    for port, width in o_wrong_length_ports.items():
+        m = (f"Output {format_port(port, None)}: {bits(width)} wide; "
+        f"expected {bits(canonical_output[port])}.")
+        errors_list.append(m)
+
+
+    for port, width in i_missing_ports.items():
+        m = f"Missing input {format_port(port, width)}."
+        if (aliases := port_aliases.get(port)):
+            s = None
+            for extra_port, extra_width in i_extra_ports.items():
+                if extra_port in aliases and extra_width == width:
+                    s = suggestion(f"rename {format_port(extra_port)} to {format_port(port)}")
+            if s is not None:
+                m = (m, s)
+        errors_list.append(m)
+
+    for port, width in o_missing_ports.items():
+        m = f"Missing output {format_port(port, width)}."
+        if (aliases := port_aliases.get(port)):
+            s = None
+            for extra_port, extra_width in o_extra_ports.items():
+                if extra_port in aliases and extra_width == width:
+                    s = suggestion(f"rename {format_port(extra_port)} to {format_port(port)}")
+            if s is not None:
+                m = (m, s)
+        errors_list.append(m)
+    print(indent_text("List of IO errors:"))
+    for e in errors_list:
+        match e:
+            case m, s:
+                print(indent_text(f" * {m}", 1))
+                print(indent_text(f"   {s}", 1))
+            case m:
+                print(indent_text(f" * {m}", 1))
+
+
+def build_live_sim(input_files: list[NamedFile], folder_name: str, mode: str):
+    global sock, compiled_program, current_sim, live_sim_hash
+
+    if mode not in simulator_data:
+        raise ContinueException(f"There is no simulator named {mode}")
+    
+    # check if any file seems to contain a call to $write and warn if so
+    # TODO: write a cool function to more elegantly turn a list into a phrase
+    
+    dollars_write_files = [f.name for f in input_files if "$write" in f.content]
+
+    if len(dollars_write_files) == 0:
+        pass
+    elif len(dollars_write_files) == 1:
+        if not prompt_y_N(f"input file {dollars_write_files[0]} appears to contain a $write "
+            "call; if your program prints output without a newline at the "
+            "end, it is very likely to crash this app.", "Build"):
+            return False
+    else: # multiple files: print all their names in a nice list
+        list_str = ", ".join(dollars_write_files[0:-1]) # all but last one
+        if len(dollars_write_files) > 2:
+            list_str += "," # Oxford comma
+        list_str += f" and {dollars_write_files[-1]}"
+        if not prompt_y_N(f"input files {list_str} appear to contain $write "
+            "calls; if your program prints output without a newline at the "
+            "end, it is very likely to crash this app.", "Build"):
+            return False
+
+    print("Generating header...", end="", flush=True)
+
+
+    command = BuildLiveCommand(input_files, simulator_data[mode]["inputs"], simulator_data[mode]["outputs"])
+    t0 = time.time()
+    t1 = t0
     send_command(command)
+
+    # header generation
+    result = receive_error_or_ack(sock)
+    match result:
+        case ErrorMessage(content):
+            print(f"{error_title()} Server returned error message on header generation:")
+            print(colorize(content, f"verilog/live_sim/{folder_name}"))
+            return False
+        case AckMessage():
+            pass
+
+    t2 = time.time()
+    print(f"success ({round((t2 - t1), 3)}s)")
+
+    t1 = t2
+    print("Checking ports...", end="", flush=True)
+
+    # port checking
+    # all done on server to avoid complex back-and-forth code, while still
+    # being able prevention of
+    result = receive_error_or_ack(sock)
+    match result:
+        case ErrorMessage(content):
+            # TODO: maybe instead send down computed inputs, have the client
+            #   check, and communicate back whether they were good?
+            #   currently checked on server to reduce the back-and-forth
+            #   this is FINE performance-wise but it's lousy
+            print(f"{error_title()} Your program was valid Verilog code, but "
+            "its top module's inputs and outputs did not match this simulator's "
+            "required list; see a working example at "
+            f"{Fore.CYAN}{Style.BRIGHT}./verilog/live_sim/ex_{mode}/top.v{Style.RESET_ALL}.")
+            print_build_errors(content, simulator_data[mode]["inputs"], simulator_data[mode]["outputs"])
+            return False
+        case AckMessage():
+            pass
+    t2 = time.time()
+    print(f"success ({round((t2 - t1), 3)}s)")
+    t1 = t2
+
+    print("Building executable...", end="", flush=True)
 
     result = receive_error_or_ack(sock)
     t2 = time.time()
     match result:
         case ErrorMessage(content):
-            if has_template_mismatch_error(content):
-                print(f"{error_title()} Your top module's inputs and outputs do not"
-                      " seem to match the required form."
-                      " See verilog/live_sim/ex_live/top.v for a"
-                      f" template/example!{Style.RESET_ALL}")
-            else:
-                print("Server returned error message:")
-                print(colorize(content, f"verilog/live_sim/{folder_name}"))
+            print(f"{error_title()} Server returned error message on final build:")
+            print(colorize(content, f"verilog/live_sim/{folder_name}"))
         case AckMessage():
-            print(f"{success_title()} Built live simulation in {round((t2 - t1), 3)}s. Run with start_live_sim.")
+            print(f"success ({round((t2 - t1), 3)}s)")
+            print(f"{success_title()} Generated and built in {round((t2 - t0), 3)}s. Run with start_live_sim.")
+            compiled_program = folder_name
+            live_sim_hash = hash(repr(files))
+            current_sim = mode
 
 def start_live_sim():
-    global app
-
+    if compiled_program is None or current_sim is None:
+        # fixes type checker but not reachable (outer code checks)
+        return
+    
     command = StartLiveCommand()
     send_command(command)
 
     result = receive_error_or_ack(sock)
+
     match result:
         case ErrorMessage(content): # known to be plain text hardcoded message
             print(f"{Fore.RED}{content}{Style.RESET_ALL}")
         case AckMessage():
-            print("Server started simulation. Launching GUI now.")
+            print(f"Server started simulation of program {Fore.CYAN}{Style.BRIGHT}./verilog/live_sim/{compiled_program}/top.v{Style.RESET_ALL}. Launching simulator \"{current_sim}\" now.")
+            print(f"Prints from the Verilog model will be indented and {Fore.BLUE}{Style.BRIGHT}bold blue{Style.RESET_ALL}!")
             # Run gui in a subprocess (fork) and give it the socket we already have
             if sys.platform != 'win32':
-                subprocess.run(f"uv run ./python/gui__main.py {sock.fileno()}", shell=True, close_fds=False)
+                subprocess.run(["uv", "run", f"./python/{simulator_data[current_sim]["path"]}", compiled_program, f"{sock.fileno()}"], close_fds=False)
             else: # Windows requires fancy code; must use Popen because child must receive input after its creation
-                live_sim_process = subprocess.Popen("uv run ./python/gui__main.py", stdin=subprocess.PIPE, shell=True, close_fds=False)
+                live_sim_process = subprocess.Popen(["uv", "run", f"./python/{simulator_data[current_sim]["path"]}", compiled_program], stdin=subprocess.PIPE, close_fds=False)
                 child_pipe: IO[bytes] = live_sim_process.stdin # pyright: ignore[reportAssignmentType]
                 shareable_socket = sock.share(live_sim_process.pid)
                 child_pipe.write(base64.b64encode(shareable_socket))
@@ -207,6 +362,8 @@ class BuildLiveSimCompleter(Completer):
 
         if args_length == 0:
             yield from FolderNameCompleter(live_sim_folder).get_completions(document, complete_event)
+        elif args_length == 1:
+            yield from WordCompleter(list(simulator_data.keys())).get_completions(document, complete_event)
            
 def main_command_completer():
     return NestedCompleter.from_nested_dict(
@@ -221,7 +378,7 @@ def main_command_completer():
 
 
 def get_server_image_tags():
-    proc = subprocess.run('docker image ls fpga-sim-server --format "{{.Tag}}"', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+    proc = subprocess.run('docker image ls ghcr.io/theharmonicrealm/fpga-sim-server --format "{{.Tag}}"', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     match proc.returncode:
         case 0:
             tags = proc.stdout.decode().strip()
@@ -237,7 +394,7 @@ def get_latest_container_port(tag: str):
     Error if there are no containers open or if Docker seems to be unopened.'''
     # Command prints string with 0 or more lines of this if successful:
     #   '{container hex id}|0.0.0.0:{port}->9834/tcp, [::]:{port}->9834/tcp'
-    proc = subprocess.run(f'docker ps --format "{r"{{.ID}}|{{.Ports}}"}" --filter "ancestor=fpga-sim-server:{tag}"', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+    proc = subprocess.run(f'docker ps --format "{r"{{.ID}}|{{.Ports}}"}" --filter "ancestor=ghcr.io/theharmonicrealm/fpga-sim-server:{tag}"', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     match proc.returncode:
         case 0:
             output = proc.stdout.decode()
@@ -276,11 +433,6 @@ def colorize(err: str, folder: str | None = None):
     err = re.sub(r"(?P<front1>(\d| )*\|)(?P<content>.*)\n(?P<front2>(\d| )*\|)(?P<content2>.*)", f"{Fore.YELLOW}{r"\g<front1>"}{Style.RESET_ALL}{r"\g<content>"}\n{Fore.YELLOW}{r"\g<front2>"}{Style.RESET_ALL}{Style.BRIGHT}{Fore.RED}{r"\g<content2>"}{Style.RESET_ALL}", err)
     return err.rstrip()
 
-def has_template_mismatch_error(err: str):
-    # can't just use `‘class Vtop’ has no member named in string` due to
-    #   ANSI color codes
-    return bool(re.search(r"Vtop[^$]* has no member named", err, flags=re.MULTILINE))
-
 class ContinueException(Exception):
     pass
 
@@ -298,7 +450,8 @@ def is_verilog(filename: str):
 def crawl_input_directory(front_target: str, containing_folder: Path, folder_name: str):
     folder = Path(*containing_folder.joinpath(folder_name).parts[-3:])
     try:
-        all_filenames = os.listdir(folder)
+        # sort so that hashing to verify unchanged is consistent
+        all_filenames = sorted(os.listdir(folder))
     except FileNotFoundError:
         raise ContinueException(f"./{folder} does not exist")
     except NotADirectoryError:
@@ -351,28 +504,6 @@ def waveform_viewer_wizard():
 
     return viewer_choice
 
-def toolbar():
-    full_text = get_app().current_buffer.text
-    split_line = full_text.split()
-    if full_text.endswith(" ") and split_line != []:
-        split_line.append(" ") # add a fake word
-    match split_line:
-        case ["waveform_sim", *_]:
-            return "Arguments: <folder> <filename.vcd> [-overwrite]"
-        case ["build_live_sim", *_]:
-            return "Arguments: <folder>"
-        case ["start_live_sim", *_]:
-            return "No arguments"
-        case ["help"] | ["?"]:
-            return "Help!"
-        case ["exit"]:
-            return "Bye!"
-        case [_] | []:
-            return "Press tab/shift-tab or up/down to select suggestions, and space to accept the highlighted one"
-        case [_, _]:
-            return "It appears you are typing in an invalid command"
-        
-
 def is_docker_open():
     proc = subprocess.run("docker info", stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     match proc.returncode:
@@ -390,7 +521,7 @@ def print_status(message: str, success: bool):
     else:
         print_formatted_text(HTML(f"<ansired>Error:</ansired> {message}"))
 
-def error_exit(message: str, *, hint: str = "", cmd: str = ""):
+def error_exit(message: str, *, hint: str = "", cmd: str = "") -> NoReturn:
     print_status(message, False)
 
     if hint != "":
@@ -493,15 +624,15 @@ if __name__ == "__main__":
             error_exit(f"Docker is open, but {e}", hint="Try running this program again. This is an unusual error.")
 
         if available_tags is None:
-            error_exit(f"The necessary Docker image (fpga-sim-server:{required_tag}) is not installed, under any version", hint="Run docker pull as described in the README at", cmd="https://github.com/TheHarmonicRealm/fpga-sim")
+            error_exit(f"The necessary Docker image (ghcr.io/theharmonicrealm/fpga-sim-server:{required_tag}) is not installed, under any version", hint="Run docker pull as described in the README at", cmd="https://github.com/TheHarmonicRealm/fpga-sim")
         elif required_tag not in available_tags:
-            error_exit(f"Other versions (tags {available_tags}) are installed, but required fpga-sim-server:{required_tag} is not installed", hint="Run git pull and/or the docker pull command described in the README at", cmd="https://github.com/TheHarmonicRealm/fpga-sim")
+            error_exit(f"Other versions (tags {available_tags}) are installed, but required ghcr.io/theharmonicrealm/fpga-sim-server:{required_tag} is not installed", hint="Run git pull and/or the docker pull command described in the README at", cmd="https://github.com/TheHarmonicRealm/fpga-sim")
         # Launch docker:
         #   preexec_fn is part of ignoring ctrl-C
         if sys.platform != 'win32':
-            process = subprocess.Popen(f"docker run --rm -p 0:9834 fpga-sim-server:{required_tag}", text=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True, preexec_fn=os.setpgrp)
+            process = subprocess.Popen(f"docker run --rm -p 0:9834 ghcr.io/theharmonicrealm/fpga-sim-server:{required_tag}", text=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True, preexec_fn=os.setpgrp)
         else: # setpgrp unavailable on Windows. TODO: figure out equivalent code to ignore on Windows
-            process = subprocess.Popen(f"docker run --rm -p 0:9834 fpga-sim-server:{required_tag}", text=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+            process = subprocess.Popen(f"docker run --rm -p 0:9834 ghcr.io/theharmonicrealm/fpga-sim-server:{required_tag}", text=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
         # wait until first print-out
         out_pipe: IO[str] = process.stdout # pyright: ignore[reportAssignmentType]
         out_pipe.readline()
@@ -518,6 +649,8 @@ if __name__ == "__main__":
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # disable Nagle's algorithm. was a HUGE headache when testing v2
+        sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         sock.set_inheritable(True)
         try:
             sock.connect(("127.0.0.1", socket_port))
@@ -542,35 +675,28 @@ if __name__ == "__main__":
 
         signal.signal(signal.SIGINT, signal.SIG_IGN) # ignore ctrl-C
 
+        try:
+            full_simulators_toml = tomllib.loads(board_data.read_text())
+        except TOMLDecodeError, ValueError:
+            error_exit(f"{clickable_filepath(board_data, 2)} is corrupted.",
+            hint="Unless you intended  to tweak the live simulation boards, "
+            "that file should not be modified and you should revert all "
+            "changes to it.")
 
-        kb = KeyBindings()
+        simulator_data = full_simulators_toml["boards"]
 
-        # browse menu with tab/shift-tab or up/down
-        @kb.add("up")
-        def _(event: KeyPressEvent):
-            event.current_buffer.start_completion()
-            event.current_buffer.complete_previous()
-        @kb.add("down")
-        def _(event: KeyPressEvent):
-            event.current_buffer.start_completion()
-            event.current_buffer.complete_next()
-        @kb.add("c-i") # tab
-        def _(event: KeyPressEvent):
-            event.current_buffer.start_completion()
-            event.current_buffer.complete_next()
-        @kb.add("s-tab") # shift-tab
-        def _(event: KeyPressEvent):
-            event.current_buffer.start_completion()
-            event.current_buffer.complete_previous()
+        # covers the original constraints file's names for suggestions
+        port_aliases = full_simulators_toml["port_aliases"]
 
-        # apply keybindings. gets full functionality with small compromise!
-        # sesh = PromptSession("> ", completer=main_command_completer(), key_bindings=kb, bottom_toolbar=toolbar)
-
-        # call this to have experience like old one on Mac/Linux.
-        #   going with this to have the least disruption
-        #   TODO: support the fancy one with a setting. I think it's
-        #   *good* but could be distracting
+        # sets up readline-like behavior and selects completer
         sesh = PromptSession("> ", enable_history_search=True, complete_while_typing=False, completer=main_command_completer(), complete_style=CompleteStyle.READLINE_LIKE, history=InMemoryHistory())
+
+        # Name of last successfully compiled Verilog program is stored
+        # TODO: use this to warn users on running if the program seems to
+        # have been modified since last compilation
+        compiled_program: str | None = None
+        live_sim_hash: int | None = None
+        current_sim = None
 
         while True:
             try:
@@ -620,19 +746,30 @@ if __name__ == "__main__":
                                 raise ContinueException(f"{command} args are <folder> <filename.vcd> [-ov]")
                     case "build_live_sim":
                         match args:
-                            case [folder]:
+                            case [folder, mode]:
                                 files = crawl_input_directory("top.v", live_sim_folder, folder)
-                                build_live_sim(files, folder)
+                                build_live_sim(files, folder, mode)
                             case _:
-                                raise ContinueException(f"{command} needs folder argument")
+                                raise ContinueException(f"{command} requires both a folder and simulator")
                     case "start_live_sim":
-                        if len(args) != 0:
-                            raise ContinueException(f"{command} takes no args")
-                        start_live_sim()
+                        # note: only first is really needed but it narrows type for next thing
+                        if compiled_program is None or current_sim is None or live_sim_hash is None:
+                            raise ContinueException("Can't start live sim because no program has been built yet!")
+                        else:
+                            test_hash = hash(repr(crawl_input_directory("top.v", live_sim_folder, compiled_program)))
+                            if test_hash != live_sim_hash:
+                                if not prompt_Y_n("it appears your program's files have changed since the last build! You may want to rebuild.", "Run"):
+                                    continue
+                            start_live_sim()
                     case "exit" | "quit":
                         exit(0)
                     case "help" | "?" | "-h":
+                        # TODO: store command help in a reasonable way
                         print("Available commands: \n* build_live_sim <folder>\n* waveform_sim <folder> <filename.vcd> [-overwrite]\n* start_live_sim\n* exit")
+                    case "clear" if sys.platform == 'win32' or sys.platform == 'linux':
+                        # not needed on Mac (use ⌘K!) but nice on the others
+                        clear()
+                        print() # extra line to push it down
                     case _:
                         print("Unrecognized command")
             except ContinueException as e:
