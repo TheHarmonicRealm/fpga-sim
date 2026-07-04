@@ -41,7 +41,7 @@ class InputDict(TypedDict, total=False):
 
 class MainWindow(BaseGUIWindow):
     def __init__(self, program_name: str, sock: socket.socket, listener_done: threading.Event, have_quit: threading.Event):
-        super().__init__(sock, listener_done, have_quit, program_name, "classic")
+        super().__init__(sock, listener_done, have_quit, program_name, "classic", target_fps=120, sleep_resolution=.00005)
 
         self.output_state = OutputDict(lights=0, dp=0b1, anode=0b1111, segment=0b111_111)
         self.input_state = InputDict(UB=0, DB=0, LB=0, RB=0, CB=0, switches=0)

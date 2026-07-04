@@ -56,5 +56,5 @@ class Sizes:
 
 light_off_time = 100
 light_fade_delay_time = 0
-segment_off_time = 200
-segment_fade_delay_time = 130
+segment_off_time = 100
+segment_fade_delay_time = 65

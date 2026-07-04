@@ -352,18 +352,17 @@ This board is based on the real devkit formerly used for WPI's course. It has:
 * A row of 16 on-off switches, aligned with a row of 16 green "LEDs"
 * 5 buttons in a plus shape, multiple of which can be pressed if clicked while
 holding shift
-* A 30 Hz clock (60 frames per second)
+* A 60 Hz clock (120 frames per second)
 
 **Dot-matrix board**
 
 This board is the same as the classic, except the seven-segment display is
 replaced with a four-digit "dot matrix" display. Each digit is 3x7 pixels.
-It is active-high for the digit-select and pattern signals. It also uses twice
-as fast a clock to reduce flickering.
+It is active-high for the digit-select and pattern signals.
 
 **Calculator board**
 
-This board has a dot-matrix display like the previous board, but replaces
+This board has a dot-matrix display like the other board, but replaces
 the controls with the layout of a four-function calculator. Its display is
 3x5 pixels per digit. This is an example of what can be made for specific
 assignments and projects that use the software. Modifying it to have more
