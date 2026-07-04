@@ -36,7 +36,7 @@ class BaseGUIWindow(EmptyWindow):
     pinged = Signal()
     # unused -- removed quit button (but still works if i want to bring back)
     close_signal = Signal()
-    def __init__(self, sock: socket.socket, listener_done: threading.Event, have_quit: threading.Event, program_name: str, sim_name: str, *, target_fps: int = 60, sleep_resolution: float = .0001, show_reset: bool = True):
+    def __init__(self, sock: socket.socket, listener_done: threading.Event, have_quit: threading.Event, program_name: str, sim_name: str, *, target_fps: int = 60, sleep_resolution: float = .0001, show_reset: bool = True, show_pause: bool = True):
         # sim_name is currently unused. didn't love including in window title
         # but might put elsewhere on the actual window later
         self.win_title = f"“{program_name}”"
@@ -72,18 +72,27 @@ class BaseGUIWindow(EmptyWindow):
         if self.is_wayland:
             pseudo_disable(self.on_top_checkbox, tooltip="Your display server (Wayland) ignores this setting and requires you to instead right-click this window's top bar to pin it!", checked=False)
 
-        # reset, pause, window settings, and FPS counters are grouped here
-        if show_reset:
+
+        # TODO: I kinda want an FPS toggle for trivial simulations without
+        # clocks, and this is unwieldy already with two options lol
+        if show_reset and show_pause:
             self.gui_meta_box = vbox_factory(
                 hbox_factory(self.pause_play_button, self.reset_inputs_button),
                 hbox_factory(self.fps_counter, self.frameless_checkbox, self.on_top_checkbox)
             )
-        else: # no reset lets us also move frameless checkbox to be more compact
+        elif show_reset:
+            self.gui_meta_box = vbox_factory( 
+                hbox_factory(self.reset_inputs_button, self.frameless_checkbox),
+                hbox_factory(self.fps_counter, self.on_top_checkbox)
+            )
+        elif show_pause:
             self.gui_meta_box = vbox_factory( 
                 hbox_factory(self.pause_play_button, self.frameless_checkbox),
                 hbox_factory(self.fps_counter, self.on_top_checkbox)
             )
-
+        else: # both false
+            self.gui_meta_box = hbox_factory(self.fps_counter, self.frameless_checkbox, self.on_top_checkbox)
+        
         # subclasses put all their widgets in here 
         # Final so type checker prevents shadowing rather than adding
         self.model_interaction_box: Final = vbox_factory()
