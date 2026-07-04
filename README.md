@@ -18,6 +18,13 @@ I would love to hear from people!
 
 ## Live sim demos
 
+This program provides four "virtual boards," three of which are shown here
+running private example programs; if you are an instructor I can provide it
+so you can test them on something less trivial than the public programs.
+[You can also make additional boards](#creating-more-live-simulator-boards)
+tailored to specific student assignments if you have a bit of Python
+experience, and I am working to make it even easier.
+
 |  Simulator  | Light mode video | Dark mode video |
 | ----------- |------------------|-----------------|
 | Calculator  |  <video src="https://github.com/user-attachments/assets/108a40d1-4020-4faf-9412-b4e7bbbdb132"></video>   | <video src="https://github.com/user-attachments/assets/e49f20da-9169-4c5f-824d-552be7e8b0af"></video>
@@ -322,8 +329,8 @@ program again.
 > Unlike live simulation, testbench/waveform simulation does not have separate build and run steps.
 
 ### Live simulation
-This program currently comes with three "virtual boards" for live simulation.
-Each provides a clock signal.
+This program currently comes with four "virtual boards" for live simulation.
+Three provide a clock signal, while one is very simple and does not.
 
 <details>
 
@@ -332,9 +339,13 @@ Each provides a clock signal.
 Example code for the first two boards is available at
 `verilog/live_sim/ex_classic` and `verilog/live_sim/ex_dotmatrix`. The
 calculator is way harder to make an example for without "giving it away" but a
-non-runnable template is at `verilog/live_sim/ex_calculator`.
+non-runnable template is at `verilog/live_sim/ex_calculator`. The final one,
+which is just the switches and LEDs from the first two boards, for an example
+of a board without a clock, made only for combinational logic, also does not
+have example code.
 
 **Classic board**
+
 This board is based on the real devkit formerly used for WPI's course. It has:
 * Four red seven-segment digits
 (controlled with active-low pattern and digit select signals)
@@ -344,18 +355,25 @@ holding shift
 * A 30 Hz clock (60 frames per second)
 
 **Dot-matrix board**
+
 This board is the same as the classic, except the seven-segment display is
 replaced with a four-digit "dot matrix" display. Each digit is 3x7 pixels.
 It is active-high for the digit-select and pattern signals. It also uses twice
 as fast a clock to reduce flickering.
 
 **Calculator board**
+
 This board has a dot-matrix display like the previous board, but replaces
 the controls with the layout of a four-function calculator. Its display is
 3x5 pixels per digit. This is an example of what can be made for specific
 assignments and projects that use the software. Modifying it to have more
 or less buttons, more digits, and/or differently shaped digits would not be
 hard for a moderately experienced programmer.
+
+**Switches board**
+
+This board has the 16 switches and 16 LEDs from the classic/dotmatrix boards,
+and no clock.
 
 </details>
 
