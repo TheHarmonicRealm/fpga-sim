@@ -529,6 +529,11 @@ people making new ones.
 Currently the coordination between the server and client is pretty annoying to
 write. I imagine there is a library out there that could let me write
 `client__shell.py` and `server__manager.py` in a more pleasant way.
+* Installation to a central location, to separate user programs from the app's
+code.
+    * If done right this would make it more feasible to install on lab computers
+    for multiple users, though if that were to happen there would be new 
+    security considerations I haven't really had in mind.
 
 ---
 †No warranty given by developer, etc.
