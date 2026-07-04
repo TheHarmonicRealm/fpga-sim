@@ -110,15 +110,18 @@ def waveform_sim(input_files: list[NamedFile], output_path: Path, folder_name: s
             match vcd_viewer:
                 case "vaporview":
                     print(result_start, f"Opening {Style.BRIGHT}{Fore.CYAN}{clickable_filepath(output_path, 2)}{Style.RESET_ALL} in VaporView.")
+                    # removed all shell uses except this one. old comment I had
+                    # said it doesn't work without shell on Windows
+                    # auto-open feature is quite a pain on Windows!
                     subprocess.run(f"code --reuse-window {shlex.quote(str(output_path))}", shell=True)
                 case "gtkwave":
                     print(result_start, f"Opening {Style.BRIGHT}{Fore.CYAN}{clickable_filepath(output_path, 2)}{Style.RESET_ALL} in GTKWave.")
                     # gtkwave launches in background. the startup text is stderr
-                    subprocess.Popen(f"gtkwave {shlex.quote(str(output_path))}", stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+                    subprocess.Popen(["gtkwave", str(output_path)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 case "surfer":
                     print(result_start, f"Opening {Style.BRIGHT}{Fore.CYAN}{clickable_filepath(output_path, 2)}{Style.RESET_ALL} in Surfer.")
                     # run in background and suppress all prints
-                    subprocess.Popen(f"surfer {shlex.quote(str(output_path))}", stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+                    subprocess.Popen(["surfer", str(output_path)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 case None:
                     print(result_start, f"Saved output to {Style.BRIGHT}{Fore.CYAN}{clickable_filepath(output_path, 2)}{Style.RESET_ALL}")
 
@@ -378,7 +381,8 @@ def main_command_completer():
 
 
 def get_server_image_tags():
-    proc = subprocess.run('docker image ls ghcr.io/theharmonicrealm/fpga-sim-server --format "{{.Tag}}"', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+    args = ["docker", "image", "ls", "ghcr.io/theharmonicrealm/fpga-sim-server", "--format", "{{.Tag}}"]
+    proc = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     match proc.returncode:
         case 0:
             tags = proc.stdout.decode().strip()
@@ -394,7 +398,9 @@ def get_latest_container_port(tag: str):
     Error if there are no containers open or if Docker seems to be unopened.'''
     # Command prints string with 0 or more lines of this if successful:
     #   '{container hex id}|0.0.0.0:{port}->9834/tcp, [::]:{port}->9834/tcp'
-    proc = subprocess.run(f'docker ps --format "{r"{{.ID}}|{{.Ports}}"}" --filter "ancestor=ghcr.io/theharmonicrealm/fpga-sim-server:{tag}"', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+
+    args = ["docker", "ps", "--format", "{{.ID}}|{{.Ports}}", "--filter", f"ancestor=ghcr.io/theharmonicrealm/fpga-sim-server:{tag}"]
+    proc = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     match proc.returncode:
         case 0:
             output = proc.stdout.decode()
@@ -505,7 +511,7 @@ def waveform_viewer_wizard():
     return viewer_choice
 
 def is_docker_open():
-    proc = subprocess.run("docker info", stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+    proc = subprocess.run(["docker", "info"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     match proc.returncode:
         case 0:
             return True
@@ -629,10 +635,11 @@ if __name__ == "__main__":
             error_exit(f"Other versions (tags {available_tags}) are installed, but required ghcr.io/theharmonicrealm/fpga-sim-server:{required_tag} is not installed", hint="Run git pull and/or the docker pull command described in the README at", cmd="https://github.com/TheHarmonicRealm/fpga-sim")
         # Launch docker:
         #   preexec_fn is part of ignoring ctrl-C
+        run_args = ["docker", "run", "--rm", "-p", "0:9834", f"ghcr.io/theharmonicrealm/fpga-sim-server:{required_tag}"]
         if sys.platform != 'win32':
-            process = subprocess.Popen(f"docker run --rm -p 0:9834 ghcr.io/theharmonicrealm/fpga-sim-server:{required_tag}", text=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True, preexec_fn=os.setpgrp)
+            process = subprocess.Popen(run_args, text=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, preexec_fn=os.setpgrp)
         else: # setpgrp unavailable on Windows. TODO: figure out equivalent code to ignore on Windows
-            process = subprocess.Popen(f"docker run --rm -p 0:9834 ghcr.io/theharmonicrealm/fpga-sim-server:{required_tag}", text=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+            process = subprocess.Popen(run_args, text=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
         # wait until first print-out
         out_pipe: IO[str] = process.stdout # pyright: ignore[reportAssignmentType]
         out_pipe.readline()
