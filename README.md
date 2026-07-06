@@ -77,7 +77,7 @@ software without thinking about it. The internet is a scary place!
 Instructions to install each of these are embedded in the list of steps.
 If any of these are already on your computer, there is no need to reinstall
 them. If you want, you can install the required software yourself then skip to
-step 7.
+[step 7](#step-7).
 
 * [git](https://git-scm.com/install/) to download the code
     * Check if you have it: run `git --version` in your terminal
@@ -119,7 +119,7 @@ labeled PowerShell, **not** Command Prompt.
 * Download [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 for your appropriate OS and CPU architecture.
 Open it when done to start the installation process, which takes 5-10 minutes.
-**You can continue until step 7 while waiting for this to finish.**
+**You can continue until [step 7](#step-7) while waiting for this to finish.**
 After installation, open it if it does not automatically open itself.
 * On Windows, it will likely prompt you to update WSL, which is the Windows
 component Docker runs on; it will display a terminal command, which you must
@@ -197,6 +197,7 @@ in order to re-accept Apple's TOS and use git.
 * The point of this is to make sure any terminal you will open from now can
 find uv, git, and VSCode.
 
+<a id="step-7"></a>
 7. Download the code and pull the Docker image:
 
 * In your terminal, run `cd ~/Documents` to go to the Documents folder.
