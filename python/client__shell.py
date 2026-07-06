@@ -24,6 +24,7 @@ from client__paths import (
     settings_filepath,
     testbench_folder,
     top_folder,
+    user_board_data,
     waveforms_folder,
 )
 from colorama import Fore, Style
@@ -537,6 +538,9 @@ def error_exit(message: str, *, hint: str = "", cmd: str = "") -> NoReturn:
             print_formatted_text(HTML(f"<ansiyellow>Hint:</ansiyellow> {hint}"))
     exit(1)
 
+class EmptyTomlException(ValueError):
+    pass
+
 if __name__ == "__main__":
     if sys.prefix == sys.base_prefix: # if not in a venv give some guidance
         print("It appears this is being run without using the right uv environment; exiting.")
@@ -683,17 +687,34 @@ if __name__ == "__main__":
         signal.signal(signal.SIGINT, signal.SIG_IGN) # ignore ctrl-C
 
         try:
-            full_simulators_toml = tomllib.loads(board_data.read_text())
+            premade_simulators_toml = tomllib.loads(board_data.read_text())
         except TOMLDecodeError, ValueError:
             error_exit(f"{clickable_filepath(board_data, 2)} is corrupted.",
-            hint="Unless you intended  to tweak the live simulation boards, "
-            "that file should not be modified and you should revert all "
-            "changes to it.")
+            hint="Unless you intended to tweak the existing live simulation "
+            "boards, that file should not be modified and you should revert "
+            "all changes to it.")
 
-        simulator_data = full_simulators_toml["boards"]
+        full_simulators_toml = premade_simulators_toml
+
+        user_simulators_toml = {}
+
+        if user_board_data.exists():
+            try:
+                d = user_board_data.read_text()
+                if d.isspace() or len(d) == 0:
+                    raise EmptyTomlException
+                user_simulators_toml |= tomllib.loads(d)
+            except EmptyTomlException: # subclass of ValueError so must be top
+                print(f"Ignoring empty {clickable_filepath(user_board_data, 2)}")
+            except TOMLDecodeError, ValueError:
+                error_exit(f"{clickable_filepath(user_board_data, 2)} is corrupted.",
+                hint="Please refer to the premade boards' setup at "
+                f"{clickable_filepath(user_board_data, 2)}.")
+
+        simulator_data = full_simulators_toml["boards"] | user_simulators_toml.get("boards", {})
 
         # covers the original constraints file's names for suggestions
-        port_aliases = full_simulators_toml["port_aliases"]
+        port_aliases = full_simulators_toml["port_aliases"] | user_simulators_toml.get("port_aliases", {})
 
         # sets up readline-like behavior and selects completer
         sesh = PromptSession("> ", enable_history_search=True, complete_while_typing=False, completer=main_command_completer(), complete_style=CompleteStyle.READLINE_LIKE, history=InMemoryHistory())
