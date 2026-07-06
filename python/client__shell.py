@@ -12,6 +12,7 @@ import time
 import tomllib
 from argparse import ArgumentParser
 from enum import Enum, auto
+from html import escape
 from pathlib import Path
 from sys import argv
 from tomllib import TOMLDecodeError
@@ -631,12 +632,12 @@ if __name__ == "__main__":
         try:
             available_tags = get_server_image_tags()
         except RuntimeError as e: # very unlikely. hard to have a reasonable hint here
-            error_exit(f"Docker is open, but {e}", hint="Try running this program again. This is an unusual error.")
+            error_exit(f"Docker is open, but {escape(str(e))}", hint="Try running this program again. This is an unusual error.")
 
         if available_tags is None:
-            error_exit(f"The necessary Docker image (ghcr.io/theharmonicrealm/fpga-sim-server:{required_tag}) is not installed, under any version", hint="Run docker pull as described in the README at", cmd="https://github.com/TheHarmonicRealm/fpga-sim")
+            error_exit(f"The necessary Docker image (ghcr.io/theharmonicrealm/fpga-sim-server:{escape(required_tag)}) is not installed, under any version", hint="Run docker pull as described in the README at", cmd="https://github.com/TheHarmonicRealm/fpga-sim")
         elif required_tag not in available_tags:
-            error_exit(f"Other versions (tags {available_tags}) are installed, but required ghcr.io/theharmonicrealm/fpga-sim-server:{required_tag} is not installed", hint="Run git pull and/or the docker pull command described in the README at", cmd="https://github.com/TheHarmonicRealm/fpga-sim")
+            error_exit(f"Other versions (tags {escape(str(available_tags))}) are installed, but required ghcr.io/theharmonicrealm/fpga-sim-server:{required_tag} is not installed", hint="Run git pull and/or the docker pull command described in the README at", cmd="https://github.com/TheHarmonicRealm/fpga-sim")
         # Launch docker:
         #   preexec_fn is part of ignoring ctrl-C
         run_args = ["docker", "run", "--rm", "-p", "0:9834", f"ghcr.io/theharmonicrealm/fpga-sim-server:{required_tag}"]
@@ -689,7 +690,7 @@ if __name__ == "__main__":
         try:
             premade_simulators_toml = tomllib.loads(board_data.read_text())
         except TOMLDecodeError, ValueError:
-            error_exit(f"{clickable_filepath(board_data, 2)} is corrupted.",
+            error_exit(f"{escape(clickable_filepath(board_data, 2))} is corrupted.",
             hint="Unless you intended to tweak the existing live simulation "
             "boards, that file should not be modified and you should revert "
             "all changes to it.")
@@ -707,7 +708,7 @@ if __name__ == "__main__":
             except EmptyTomlException: # subclass of ValueError so must be top
                 print(f"Ignoring empty {clickable_filepath(user_board_data, 2)}")
             except TOMLDecodeError, ValueError:
-                error_exit(f"{clickable_filepath(user_board_data, 2)} is corrupted.",
+                error_exit(f"{escape(clickable_filepath(user_board_data, 2))} is corrupted.",
                 hint="Please refer to the premade boards' setup at "
                 f"{clickable_filepath(user_board_data, 2)}.")
 
