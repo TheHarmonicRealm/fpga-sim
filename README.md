@@ -6,8 +6,9 @@ to run Verilog testbenches and to run synthesizable code interactively on a
 "virtual FPGA board" (referred to as "live simulations").
 
 Primary development is on Mac, with significant testing on Windows and Ubuntu.
-This program will work almost identically across platforms, and reasonably
-simple live simulation code should run at full speed on most computers.
+The software has [low performance requirements](os-hardware) and I believe it
+will run well on almost any computer from the past few years with a recent
+operating system.
 
 This software was first used in spring 2026 for ECE 2029
 (*Introduction to Digital Circuit Design*) at Worcester Polytechnic Institute
@@ -35,6 +36,7 @@ experience, and I am working to make it even easier.
 
 ## System requirements
 
+<a id="os-hardware"></a>
 ### Operating systems/hardware
 
 Updated July 2, 2026, based on [Qt's requirements](https://doc.qt.io/qt-6/supported-platforms.html)
