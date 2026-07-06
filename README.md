@@ -169,10 +169,18 @@ as an officially supported viewer to automatically open waveforms.
 4. Install uv:
 * Windows: use [uv's standalone Windows installer](https://docs.astral.sh/uv/getting-started/installation/#__tabbed_1_2)
 (paste the **first listed command** into your terminal to run a script).
-    * This can also try installing with `py -m pip install uv`, which may
-    work for some people if the normal installation fails.
-        * If you install this way, uv must be invoked with `py -m uv`
-        in place of `uv` (so `py -m uv run ...` etc)
+    * If this fails, you can try installing uv via pip instead:
+        * First try running `py -m ensurepip`.
+            * If this returns a message like "requirement already satisfied..."
+            or "installing pip" followed by some loading bars, continue to the
+            next bullet point once the process finishes.
+            * If this returns a message like "py not found",
+            [install the latest version of Python 3.14](https://www.python.org/downloads/),
+            and when that's done open a new terminal tab and try the ensurepip
+            command again.
+        * Once you have pip, install uv using `py -m pip install uv`.
+            * If installed in this manner, uv is invoked eith `py -m uv`
+            in place of `uv` (so `py -m uv run ...` etc)
 * Mac/Linux: use [uv's standalone Mac/Linux installer](https://docs.astral.sh/uv/getting-started/installation/#__tabbed_1_1)
 (paste the listed command in the terminal to run a script).
 
