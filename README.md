@@ -97,8 +97,6 @@ highlighter
     extension, [GTKWave](https://gtkwave.github.io/gtkwave/index.html),
     or [Surfer](https://gitlab.com/surfer-project/surfer), but any program that
     can open .vcd files can be used manually
-* Linux users: if you happen to have not run a Qt app before, you may be
-required to install a package when you try to run live simulation.
 
 ## Installation walkthrough
 
@@ -392,6 +390,12 @@ After successfully building, launch the simulator with:
 ```
 start_live_sim
 ```
+
+> [!Note]
+> Linux users: when trying to run live simulation, which uses Qt to create a
+> GUI, you may get an error saying something like
+> `Could not load the Qt platform plugin "xcb"`. To resolve this,
+> [install the appropriate XCB cursor plugin for your distribution](https://stackoverflow.com/questions/77725761/).
 
 Notes:
 * The folder and module names must contain only underscores and letters.
