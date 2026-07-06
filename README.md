@@ -429,8 +429,6 @@ It can be paused and unpaused with <kbd>P</kbd> or the button at the bottom.
 autocomplete for commands, and, in the second argument position, folder names
 for `waveform_sim`/`build_live_sim`. There is also up/down history browsing
 like in a real shell.
-    * There is a third-party library for readline I want to eventually add
-    so Windows has a better experience.
 
 #### Creating more live simulator "boards"
 
