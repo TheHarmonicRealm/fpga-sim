@@ -154,9 +154,6 @@ Just like Docker Desktop, open it when the download finishes, and an
 installation process will start.
     * After VSCode is installed, install these two extensions:
         * [Verilog language support](https://marketplace.visualstudio.com/items?itemName=eirikpre.systemverilog)
-            * This is a different one from in previous versions of these instructions.
-            It is not a full language server like in Vivado, but it is somewhat
-            more sophisticated. Uninstall the old one if you have it already.
         * [VaporView](https://marketplace.visualstudio.com/items?itemName=lramseyer.vaporview) VCD viewer
 
 **If you are not using VSCode**:
