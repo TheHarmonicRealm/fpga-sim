@@ -20,8 +20,9 @@ I would love to hear from people!
 ## Live sim demos
 
 This program provides four "virtual boards," three of which are shown here
-running private example programs; if you are an instructor I can provide it
-so you can test them on something less trivial than the public programs.
+running my own private Verilog example programs; if you are an instructor I can
+send you the Verilog source code to test the app on something less trivial than
+the public programs.
 [You can also make additional boards](#creating-more-live-simulator-boards)
 tailored to specific student assignments if you have a bit of Python
 experience, and I am working to make it even easier.
@@ -191,8 +192,8 @@ for your appropriate CPU architecture.
 Open it when done to start the installation process, which will consist of a lot
 of screens, all of which you should choose the defaults on.
 * Mac: use `xcode-select --install`. This gets you various tools including git.
-Note that you will need to run `sudo xcodebuild -license accept`
-(which will prompt for your password) sometimes when your computer updates
+    * Note that you will need to run `sudo xcodebuild -license accept`
+    (which will prompt for your password) sometimes when your computer updates
 in order to re-accept Apple's TOS and use git.
 * Linux: [git install instructions for Linux](https://git-scm.com/install/linux)
 (lists various package manager commands)
@@ -225,7 +226,7 @@ find uv, git, and VSCode.
 
 
 * "Clone" this git repository. This will put the software in a new folder within
-Documents:
+the current working directory:
 
     ```
     git clone https://github.com/TheHarmonicRealm/fpga-sim.git
