@@ -635,9 +635,9 @@ if __name__ == "__main__":
             error_exit(f"Docker is open, but {escape(str(e))}", hint="Try running this program again. This is an unusual error.")
 
         if available_tags is None:
-            error_exit(f"The necessary Docker image (ghcr.io/theharmonicrealm/fpga-sim-server:{escape(required_tag)}) is not installed, under any version", hint="Run docker pull as described in the README at", cmd="https://github.com/TheHarmonicRealm/fpga-sim")
+            error_exit(f"The necessary Docker image (ghcr.io/theharmonicrealm/fpga-sim-server:{escape(required_tag)}) is not installed, under any version", hint="Pull the Docker image by running", cmd=f"git pull ghcr.io/theharmonicrealm/fpga-sim-server:{escape(required_tag)}")
         elif required_tag not in available_tags:
-            error_exit(f"Other versions (tags {escape(str(available_tags))}) are installed, but required ghcr.io/theharmonicrealm/fpga-sim-server:{required_tag} is not installed", hint="Run git pull and/or the docker pull command described in the README at", cmd="https://github.com/TheHarmonicRealm/fpga-sim")
+            error_exit(f"Other versions (tags {escape(str(available_tags))}) are installed, but required ghcr.io/theharmonicrealm/fpga-sim-server:{required_tag} is not installed", hint="Update the Docker image by running", cmd=f"git pull ghcr.io/theharmonicrealm/fpga-sim-server:{escape(required_tag)}")
         # Launch docker:
         #   preexec_fn is part of ignoring ctrl-C
         run_args = ["docker", "run", "--rm", "-p", "0:9834", f"ghcr.io/theharmonicrealm/fpga-sim-server:{required_tag}"]
