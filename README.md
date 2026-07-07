@@ -444,6 +444,12 @@ the widths of the new board's input and output ports.
     * Base these on `board_data.toml` but place them here to not have
     merge conflicts when updating via `git pull`.
 
+> [!Caution]
+> `gui__base.py` and its dependencies (`gui__widgets.py` etc.) are currently 
+> liable to change dramatically. I will stabilize them more eventually.
+> For now, if you are distributing custom boards, please consider copying the
+> files they import under another name for maximum reliability.
+
 ## Updating the software
 
 Use `git pull` to update the project. This will not modify your waveform viewer
