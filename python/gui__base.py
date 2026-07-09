@@ -37,8 +37,6 @@ class BaseGUIWindow(EmptyWindow):
     input_time = Signal()
     # triggered when the server gives us a response to our sending up of latest
     pinged = Signal()
-    # unused -- removed quit button (but still works if i want to bring back)
-    close_signal = Signal()
     def __init__(self, sock: socket.socket, listener_done: threading.Event, have_quit: threading.Event, program_name: str, sim_name: str, *, target_fps: int = 60, sleep_resolution: float = .0001, show_reset: bool = True, show_pause: bool = True):
         # sim_name is currently unused. didn't love including in window title
         # but might put elsewhere on the actual window later

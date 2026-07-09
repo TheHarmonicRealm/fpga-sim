@@ -84,7 +84,6 @@ class MainWindow(BaseGUIWindow):
 
         self.input_changed.connect(self.update_latest)
         self.output_changed.connect(self.set_output_state)
-        self.close_signal.connect(self.quit_program)
 
         self.model_interaction_box.addLayout(
             vbox_factory(
@@ -118,14 +117,6 @@ class MainWindow(BaseGUIWindow):
     
     def ready_quit(self):
         self.should_quit = True
-
-    @Slot()
-    def quit_program(self):
-        # get app instance, then close window before quitting app
-        app: QApplication = QApplication.instance() # pyright: ignore[reportAssignmentType]
-        self.close()
-        app.exit()
-
 
     def update_server(self):
         if not self.paused:
