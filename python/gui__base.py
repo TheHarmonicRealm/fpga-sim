@@ -57,7 +57,10 @@ class BaseGUIWindow(EmptyWindow):
 
         self.last_few_fps: list[float] = []
         self.last_time = time.perf_counter()
-        self.fps_counter = QLabel(f"__.__/{target_fps} FPS")
+        # start out right size to remove source of startup window jumping
+        underscore_str = f"{"_" * len(str(target_fps))}.__"
+        self.fps_len = len(underscore_str)
+        self.fps_counter = QLabel(f"<code>{underscore_str}</code>/{target_fps} FPS")
 
 
         self.paused = False
@@ -134,7 +137,10 @@ class BaseGUIWindow(EmptyWindow):
         new_time = time.perf_counter()
         self.last_few_fps.append(1/(new_time - self.last_time))
         if len(self.last_few_fps) == 10:
-            self.fps_counter.setText(f"<code>{mean(self.last_few_fps):.2f}/{self.target_fps}</code> FPS")
+            n = mean(self.last_few_fps)
+            # format to 2 digits with padding on left to not jump
+            nbsp = " " # use NBSP so Qt HTML renderer keeps the spaces
+            self.fps_counter.setText(f"<code>{n:{nbsp}>{self.fps_len}.2f}/{self.target_fps}</code> FPS")
             self.last_few_fps.clear()
         self.last_time = new_time
 
