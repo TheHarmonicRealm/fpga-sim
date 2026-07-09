@@ -2,19 +2,15 @@
 Launched as subprocess from client__shell.py
 '''
 
-import base64
 import socket
-import sys
 import threading
 from typing import TypedDict
 
-from gui__base import BaseGUIWindow
-from gui__util import reconstruct_socket_unix, reconstruct_socket_windows
+from gui__base import BaseGUIWindow, Runner
 from gui__widgets import (
     BoardComponents,
     hbox_factory,
     int_to_bool_list,
-    make_app,
     vbox_factory,
 )
 from PySide6.QtCore import QTimer, Slot
@@ -115,34 +111,6 @@ class MainWindow(BaseGUIWindow):
     def update_latest(self, new_latest: InputDict):
         self.latest.update(new_latest)
 
-
-def run_app(program_name: str, sock: socket.socket, listener_done: threading.Event, have_quit: threading.Event):
-    app = make_app()
-    window = MainWindow(program_name, sock, listener_done, have_quit)
-    # pin to top at start (ignored on Wayland)
-    window.set_on_top(True)
-    app.exec()
-    return app
-
 if __name__ == "__main__":
-    listener_done = threading.Event()
-    have_quit = threading.Event()
-
-    if sys.platform != 'win32':
-        # reconstruct socket from regular file descriptor
-        sock = reconstruct_socket_unix(int(sys.argv[2]))
-    else: # make socket from received output of socket.share()
-        socket_share_data = base64.b64decode(sys.stdin.buffer.read())
-        sock = reconstruct_socket_windows(socket_share_data)
-
-    program_name = sys.argv[1]
-
-    run_app(program_name, sock, listener_done, have_quit)
-
-    # app has been quit. tell server we are quitting then wait for
-    #   listener to get ACK back. Necessary to have a "clean" socket on exit
-    #   for main program to continue with as normal
-    have_quit.set()
-    send_message("exit", sock)
-    listener_done.wait()
-    print("Exited live sim!")
+    r = Runner()
+    r.run(MainWindow)

@@ -1,5 +1,6 @@
 import ast
 import socket
+import sys
 import textwrap
 import threading
 import time
@@ -12,14 +13,16 @@ from gui__widgets import (
     InputWidget,
     hbox_factory,
     make_action,
+    make_app,
     make_button,
     make_checkbox,
     pseudo_disable,
     vbox_factory,
 )
+from gui__util import reconstruct_socket_unix, reconstruct_socket_windows
 from PySide6.QtCore import QDeadlineTimer, QThread, QTimer, Signal
 from PySide6.QtWidgets import QApplication, QLabel
-from shared__util import big_receive
+from shared__util import big_receive, send_message
 
 
 def deserialize_dict(d: str) -> dict:
@@ -183,3 +186,34 @@ class ListenThread(QThread):
 
             while not our_timer.hasExpired():
                 time.sleep(window.sleep_resolution)
+
+class Runner:
+    def __init__(self) -> None:
+        self.listener_done = threading.Event()
+        self.have_quit = threading.Event()
+
+        if sys.platform != 'win32':
+            # reconstruct socket from regular file descriptor
+            self.sock = reconstruct_socket_unix(int(sys.argv[2]))
+        else: # make socket from received output of socket.share()
+            socket_share_data = base64.b64decode(sys.stdin.buffer.read())
+            self.sock = reconstruct_socket_windows(socket_share_data)
+
+        self.program_name = sys.argv[1]
+        self.app = make_app()
+
+    def run(self, c: type[BaseGUIWindow]):
+        # make a window. TODO: Runner really doesn't need to be the creator
+        #   of the flags, and the parameter situation is wonky.
+        #   Only the program name and sock name originate from here.
+        #   We DO need to either make the window here, or receive the app as
+        #   param 1.
+        window = c(self.program_name, self.sock, self.listener_done, self.have_quit) # pyright: ignore[reportCallIssue]
+        # pin to top at start (ignored on Wayland)
+        window.set_on_top(True)
+        self.app.exec()
+
+        self.have_quit.set()
+        send_message("exit", self.sock)
+        self.listener_done.wait()
+        print("Exited live sim!")
