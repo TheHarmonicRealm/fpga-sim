@@ -3,18 +3,17 @@ Launched as subprocess from client__shell.py
 '''
 
 import socket
-import threading
 from typing import TypedDict
 
+import gui__constants as c
 from gui__base import BaseGUIWindow, Runner
 from gui__widgets import (
     BoardComponents,
     NormalButton,
     vbox_factory,
 )
-import gui__constants as c
 from PySide6.QtCore import QTimer, Slot
-from PySide6.QtWidgets import QApplication, QGridLayout, QSizePolicy
+from PySide6.QtWidgets import QGridLayout, QSizePolicy
 from shared__util import dict_diff, send_message
 
 
@@ -44,8 +43,8 @@ class InputDict(TypedDict, total=False):
     add: int
 
 class MainWindow(BaseGUIWindow):
-    def __init__(self, program_name: str, sock: socket.socket, listener_done: threading.Event, have_quit: threading.Event):
-        super().__init__(sock, listener_done, have_quit, program_name, "calculator", show_reset = False, target_fps=120, sleep_resolution=.00005)
+    def __init__(self, program_name: str, sock: socket.socket):
+        super().__init__(sock, program_name, "calculator", show_reset = False, target_fps=120, sleep_resolution=.00005)
 
         self.output_state = OutputDict(matrix=0, select=0)
         self.input_state = InputDict(B0 = 0, B1 = 0, B2 = 0, B3 = 0, B4 = 0, B5 = 0, B6 = 0, B7 = 0, B8 = 0, B9 = 0, equals = 0, clear = 0, divide = 0, multiply = 0, subtract = 0, add = 0)
@@ -125,7 +124,6 @@ class MainWindow(BaseGUIWindow):
             self.previous.update(self.latest)
         else:
             send_message("", self.sock)
-
 
     def update_latest(self, new_latest: InputDict):
         self.latest.update(new_latest)

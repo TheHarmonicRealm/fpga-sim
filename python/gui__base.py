@@ -37,7 +37,7 @@ class BaseGUIWindow(EmptyWindow):
     input_time = Signal()
     # triggered when the server gives us a response to our sending up of latest
     pinged = Signal()
-    def __init__(self, sock: socket.socket, listener_done: threading.Event, have_quit: threading.Event, program_name: str, sim_name: str, *, target_fps: int = 60, sleep_resolution: float = .0001, show_reset: bool = True, show_pause: bool = True):
+    def __init__(self, sock: socket.socket, program_name: str, sim_name: str, *, target_fps: int = 60, sleep_resolution: float = .0001, show_reset: bool = True, show_pause: bool = True):
         # sim_name is currently unused. didn't love including in window title
         # but might put elsewhere on the actual window later
         self.win_title = f"“{program_name}”"
@@ -46,8 +46,12 @@ class BaseGUIWindow(EmptyWindow):
         self.target_fps = target_fps
         self.sleep_resolution = sleep_resolution
 
+
+        self.listener_done = threading.Event()
+        self.have_quit = threading.Event()
+
         # important: put thread under self or gc destroys it immediately
-        self.listen_thread = ListenThread(self, listener_done, have_quit)
+        self.listen_thread = ListenThread(self)
 
         # must be behind singleshot delay because this runs before child
         #   constructor, so the signals aren't connected yet
@@ -146,12 +150,12 @@ class BaseGUIWindow(EmptyWindow):
         self.last_time = new_time
 
 class ListenThread(QThread):
-    def __init__(self, window: BaseGUIWindow, listener_done: threading.Event, have_quit: threading.Event):
+    def __init__(self, window: BaseGUIWindow):
         super().__init__()
         self.window = window
 
-        self.listener_done = listener_done
-        self.have_quit = have_quit
+        self.listener_done = window.listener_done
+        self.have_quit = window.have_quit
 
     def run(self):
         window = self.window
@@ -187,8 +191,6 @@ class ListenThread(QThread):
 
 class Runner:
     def __init__(self) -> None:
-        self.listener_done = threading.Event()
-        self.have_quit = threading.Event()
 
         if sys.platform != 'win32':
             # reconstruct socket from regular file descriptor
@@ -206,12 +208,12 @@ class Runner:
         #   Only the program name and sock name originate from here.
         #   We DO need to either make the window here, or receive the app as
         #   param 1.
-        window = c(self.program_name, self.sock, self.listener_done, self.have_quit) # pyright: ignore[reportCallIssue]
+        window = c(self.program_name, self.sock) # pyright: ignore[reportCallIssue]
         # pin to top at start (ignored on Wayland)
         window.set_on_top(True)
         self.app.exec()
 
-        self.have_quit.set()
+        window.have_quit.set()
         send_message("exit", self.sock)
-        self.listener_done.wait()
+        window.listener_done.wait()
         print("Exited live sim!")
