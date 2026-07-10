@@ -172,7 +172,6 @@ class ListenThread(QThread):
             window.pinged.emit() # update FPS after receiving
 
             if response == "exit":
-                print("Got exit")
                 self.listener_done.set()
                 break
             else:
