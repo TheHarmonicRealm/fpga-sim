@@ -65,8 +65,7 @@ class BaseGUIWindow(EmptyWindow):
         # start out right size to remove source of startup window jumping
         underscore_str = f"{"_" * len(str(target_fps))}.__"
         self.fps_len = len(underscore_str)
-        self.fps_counter = QLabel(f"<code>{underscore_str}</code>/{target_fps} FPS")
-
+        self.fps_counter = QLabel(f"<code>{underscore_str}/{target_fps}</code> FPS")
 
         self.paused = False
         self.pause_play_button = make_button("Pause", self.pause_play, tooltip="Shortcut: P")
