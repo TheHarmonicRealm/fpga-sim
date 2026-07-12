@@ -37,7 +37,7 @@ class BaseGUIWindow(EmptyWindow):
     input_time = Signal()
     # triggered when the server gives us a response to our sending up of latest
     pinged = Signal()
-    def __init__(self, sock: socket.socket, program_name: str, sim_name: str, *, target_fps: int = 60, sleep_resolution: float = .0001, show_reset: bool = True, show_pause: bool = True):
+    def __init__(self, sock: socket.socket, program_name: str, sim_name: str, *, target_fps: int = 60, sleep_resolution: float = .0001, show_reset: bool = True, show_pause: bool = True, fixed_size: bool = True):
         # sim_name is currently unused. didn't love including in window title
         # but might put elsewhere on the actual window later
         self.win_title = f"“{program_name}”"
@@ -117,6 +117,9 @@ class BaseGUIWindow(EmptyWindow):
 
         # Allow quitting with ctrl+W/cmd+W
         self.addAction(make_action("Quit simulation", QApplication.quit, "Ctrl+W", self))
+
+        if fixed_size:
+            QTimer.singleShot(0, lambda: self.setFixedSize(self.minimumSizeHint()))
 
     def reset_inputs(self):
         for w in self.input_widgets:

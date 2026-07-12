@@ -95,7 +95,6 @@ class MainWindow(BaseGUIWindow):
         self.pinged.connect(self.update_fps)
         self.input_time.connect(self.update_server)
 
-        QTimer.singleShot(0, lambda: self.setFixedSize(self.minimumSizeHint()))
 
     def make_calc_button(self, label: str, key: str):
         b = NormalButton(label, None, font_points=c.Sizes.calc_button_font, mono=True)
