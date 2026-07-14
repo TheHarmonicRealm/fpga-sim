@@ -25,16 +25,16 @@ class OutputDict(TypedDict, total=True):
 
 class InputDict(TypedDict, total=False):
     # non-total to allow sending just diffs up
-    B0: int
-    B1: int
-    B2: int
-    B3: int
-    B4: int
-    B5: int
-    B6: int
-    B7: int
-    B8: int
-    B9: int
+    b0: int
+    b1: int
+    b2: int
+    b3: int
+    b4: int
+    b5: int
+    b6: int
+    b7: int
+    b8: int
+    b9: int
     equals: int
     clear: int
     divide: int
@@ -47,7 +47,7 @@ class MainWindow(BaseGUIWindow):
         super().__init__(sock, program_name, "calculator", show_reset = False, target_fps=120, sleep_resolution=.00005)
 
         self.output_state = OutputDict(matrix=0, select=0)
-        self.input_state = InputDict(B0 = 0, B1 = 0, B2 = 0, B3 = 0, B4 = 0, B5 = 0, B6 = 0, B7 = 0, B8 = 0, B9 = 0, equals = 0, clear = 0, divide = 0, multiply = 0, subtract = 0, add = 0)
+        self.input_state = InputDict(b0=0, b1=0, b2=0, b3=0, b4=0, b5=0, b6=0, b7=0, b8=0, b9=0, equals=0, clear=0, divide=0, multiply=0, subtract=0, add=0)
 
         self.display = BoardComponents.DotMatrixGroup(4, 3, 5, inter_spacing=6)
 
