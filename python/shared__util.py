@@ -5,7 +5,7 @@ import ast
 import dataclasses as dc
 import os
 import socket
-from collections.abc import Mapping
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 import textwrap
@@ -211,3 +211,9 @@ def dict_diff(new: dict, old: dict):
 def indent_text(in_str: str, depth: int=1):
     '''indents x number of 4-space "tabs"'''
     return textwrap.indent(in_str, (" " * 4) * depth)
+
+def first_matching[T](li: list[T], fn: Callable[[Any], bool]) -> T:
+    for i in li:
+        if fn(i):
+            return i
+    raise RuntimeError("first_matching() had unexpected error: Element not found in list!")

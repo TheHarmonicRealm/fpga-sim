@@ -21,6 +21,7 @@ from shared__util import (
     WaveformSimCommand,
     big_receive,
     deserialize_dataclass,
+    first_matching,
     header_to_dc,
     send_message,
     serialize_dataclass,
@@ -143,10 +144,9 @@ def try_waveform_run(name: str, files: list[NamedFile]):
         return None, ErrorMessage(f"SRVRSEZ:Lacking a tb.v (Client should have caught this)")
     names.insert(0, "tb.v") # put at front to indicate top to Verilator
 
-    for file in files:
-        if file.name == "tb.v":
-            break
-    tb_file = file
+    # get the tb file to manipulate it (we know it is there)
+    tb_file = first_matching(files, lambda x: x.name == "tb.v")
+
     if tb_file.content.find("$DUMP_FILENAME") == -1:
         return None, ErrorMessage("SRVRSEZ:Testbench did not include wildcard "
         "$DUMP_FILENAME; should have lines $dumpfile(\"$DUMP_FILENAME\"); "
