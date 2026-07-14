@@ -3,19 +3,16 @@ Launched as subprocess from client__shell.py
 '''
 
 import socket
-import threading
-from typing import TypedDict
+from typing import TypedDict, override
+
 
 from gui__base import BaseGUIWindow, Runner
 from gui__widgets import (
     BoardComponents,
-    hbox_factory,
     int_to_bool_list,
+    hbox_factory,
     vbox_factory,
 )
-from PySide6.QtCore import QTimer, Slot
-from PySide6.QtWidgets import QApplication
-from shared__util import dict_diff, send_message
 
 
 class OutputDict(TypedDict, total=True):
@@ -35,8 +32,8 @@ class InputDict(TypedDict, total=False):
     switches: int
 
 class MainWindow(BaseGUIWindow):
-    def __init__(self, program_name: str, sock: socket.socket, listener_done: threading.Event, have_quit: threading.Event):
-        super().__init__(sock, listener_done, have_quit, program_name, "dot matrix", target_fps=120, sleep_resolution=.00005)
+    def __init__(self, program_name: str, sock: socket.socket):
+        super().__init__(sock, program_name, "dotmatrix", show_reset = True, target_fps=120, sleep_resolution=.00005)
 
         self.output_state = OutputDict(matrix=0, select=0, lights=0)
         self.input_state = InputDict(UB=0, DB=0, LB=0, RB=0, CB=0, switches=0)
@@ -48,16 +45,8 @@ class MainWindow(BaseGUIWindow):
 
         self.input_widgets += [self.plus_buttons, self.switches_line]
 
-        self.switches_line.state_changed.connect(lambda x: self.update_input_state(switches=x))
-        self.plus_buttons.state_changed.connect(lambda x: self.update_input_state(buttons=x))
-
-        self.latest = self.input_state.copy()
-        self.previous = self.latest.copy() # start: previous is 0 too
-
-        self.should_quit = False
-
-        self.input_changed.connect(self.update_latest)
-        self.output_changed.connect(self.set_output_state)
+        self.switches_line.state_changed.connect(lambda x: self.update_input_state({"switches": x}))
+        self.plus_buttons.state_changed.connect(lambda x: self.update_input_state(dict(zip(["UB", "DB", "LB", "RB", "CB"], int_to_bool_list(x, 5)))))
 
         self.model_interaction_box.addLayout(
             vbox_factory(
@@ -68,41 +57,14 @@ class MainWindow(BaseGUIWindow):
             )
         )
 
-        self.pinged.connect(self.update_fps)
-        self.input_time.connect(self.update_server)
+        self.post_init_check()
 
-        QTimer.singleShot(0, lambda: self.setFixedSize(self.minimumSizeHint()))
-
-    @Slot(object)
-    def set_output_state(self, new_output_state: OutputDict):
-        self.output_state.update(new_output_state)
+    @override # mandatory to override this!!!
+    def update_display_devices(self):
         self.lights_line.set_output_state(self.output_state["lights"])
         self.four_digits.set(self.output_state["matrix"], self.output_state["select"])
 
-    def update_input_state(self, *, buttons: int | None = None, switches: int | None = None):
-        if buttons is not None:
-            for b, state in zip(["UB", "DB", "LB", "RB", "CB"], int_to_bool_list(buttons, 5)):
-                self.input_state[b] = int(state)
-        if switches is not None:
-            self.input_state["switches"] = switches
-        self.input_changed.emit(self.input_state)
-    
-    def ready_quit(self):
-        self.should_quit = True
 
-
-    def update_server(self):
-        if not self.paused:
-            # only sends the ones that changed
-            send_message(str(dict_diff(self.latest, self.previous)), self.sock)
-            self.previous.update(self.latest)
-        else:
-            send_message("", self.sock)
-
-
-    def update_latest(self, new_latest: InputDict):
-        self.latest.update(new_latest)
 
 if __name__ == "__main__":
-    r = Runner()
-    r.run(MainWindow)
+    Runner().run(MainWindow)
