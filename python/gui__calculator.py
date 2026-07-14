@@ -3,7 +3,7 @@ Launched as subprocess from client__shell.py
 '''
 
 import socket
-from typing import TypedDict
+from typing import TypedDict, override
 
 import gui__constants as c
 from gui__base import BaseGUIWindow, Runner
@@ -12,9 +12,7 @@ from gui__widgets import (
     NormalButton,
     vbox_factory,
 )
-from PySide6.QtCore import QTimer, Slot
 from PySide6.QtWidgets import QGridLayout, QSizePolicy
-from shared__util import dict_diff, send_message
 
 
 class OutputDict(TypedDict, total=True):
@@ -67,7 +65,7 @@ class MainWindow(BaseGUIWindow):
             [self.calc_nums[7], self.calc_nums[8], self.calc_nums[9], self.div_btn],
             [self.calc_nums[4], self.calc_nums[5], self.calc_nums[6], self.mul_btn],
             [self.calc_nums[1], self.calc_nums[2], self.calc_nums[3], self.sub_btn],
-            [self.clr_btn,           self.calc_nums[0], self.eql_btn,           self.add_btn],
+            [self.clr_btn,      self.calc_nums[0], self.eql_btn,      self.add_btn],
         ]
 
         for row in range(0, 4):
@@ -76,57 +74,28 @@ class MainWindow(BaseGUIWindow):
                 self.calc_area.setColumnStretch(col, 0)
             self.calc_area.setRowStretch(row, 0)
 
-        self.latest = self.input_state.copy()
-        self.previous = self.latest.copy() # start: previous is 0 too
-
-        self.should_quit = False
-
-        self.input_changed.connect(self.update_latest)
-        self.output_changed.connect(self.set_output_state)
 
         self.model_interaction_box.addLayout(
             vbox_factory(
                 self.display,
                 self.calc_area
-                
             )
         )
 
-        self.pinged.connect(self.update_fps)
-        self.input_time.connect(self.update_server)
-
+        self.post_init_check()
 
     def make_calc_button(self, label: str, key: str):
         b = NormalButton(label, None, font_points=c.Sizes.calc_button_font, mono=True)
         b.setFixedHeight(c.Sizes.calc_button_height)
         # ignore policy for horizontal makes it minimum (trial and error tbh)
         b.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Minimum)
-        b.state_changed.connect(lambda s: self.update_input_state(key, int(s)))
+        b.state_changed.connect(lambda s: self.update_input_state({key: int(s)}))
         return b
 
-    @Slot(object)
-    def set_output_state(self, new_output_state: OutputDict):
-        self.output_state.update(new_output_state)
+    @override # mandatory to override this!!!
+    def update_display_devices(self):
         self.display.set(self.output_state["matrix"], self.output_state["select"])
 
-    def update_input_state(self, key: str, state: int):
-        self.input_state[key] = state
-        self.input_changed.emit(self.input_state)
-    
-    def ready_quit(self):
-        self.should_quit = True
-
-    def update_server(self):
-        if not self.paused:
-            # only sends the ones that changed
-            send_message(str(dict_diff(self.latest, self.previous)), self.sock)
-            self.previous.update(self.latest)
-        else:
-            send_message("", self.sock)
-
-    def update_latest(self, new_latest: InputDict):
-        self.latest.update(new_latest)
 
 if __name__ == "__main__":
-    r = Runner()
-    r.run(MainWindow)
+    Runner().run(MainWindow)

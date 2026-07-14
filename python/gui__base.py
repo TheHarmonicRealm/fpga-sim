@@ -4,10 +4,12 @@ import sys
 import textwrap
 import threading
 import time
+from collections.abc import Mapping
 from statistics import mean
-from typing import Final
+from typing import Final, override
 
 from colorama import Fore, Style
+from gui__util import reconstruct_socket_unix, reconstruct_socket_windows
 from gui__widgets import (
     EmptyWindow,
     InputWidget,
@@ -19,14 +21,19 @@ from gui__widgets import (
     pseudo_disable,
     vbox_factory,
 )
-from gui__util import reconstruct_socket_unix, reconstruct_socket_windows
-from PySide6.QtCore import QDeadlineTimer, QThread, QTimer, Signal
+from PySide6.QtCore import QDeadlineTimer, QThread, QTimer, Signal, Slot
 from PySide6.QtWidgets import QApplication, QLabel
-from shared__util import big_receive, send_message
+from shared__util import big_receive, dict_diff, send_message
 
 
 def deserialize_dict(d: str) -> dict:
     return ast.literal_eval(d)
+
+def error_quit(error: str):
+    '''Call this instead of raising errors to (probably) avoid a full crash in
+    scenarios where the virtual board is miswritten'''
+    print(f"{Fore.RED}{Style.BRIGHT}Error:{Style.RESET_ALL} {error}")
+    QTimer.singleShot(0, QApplication.quit)
 
 class BaseGUIWindow(EmptyWindow):
     # triggered whenever a model input changes, causing an update to `latest`, the dict sent upwards every non-paused frame
@@ -58,6 +65,18 @@ class BaseGUIWindow(EmptyWindow):
         QTimer.singleShot(0, self.listen_thread.start)
 
         self.input_widgets: list[InputWidget] = []
+
+        # first two are redefined in subclasses. defined here to avoid type-checker errors
+        #   in shared functions
+        self.output_state = {}
+        self.input_state = {}
+        self.latest = {}
+        self.previous = {}
+
+        self.pinged.connect(self.update_fps)
+        self.input_time.connect(self.update_server)
+        self.input_changed.connect(self.update_latest)
+        self.output_changed.connect(self.set_output_state)
 
 
         self.last_few_fps: list[float] = []
@@ -121,6 +140,23 @@ class BaseGUIWindow(EmptyWindow):
         if fixed_size:
             QTimer.singleShot(0, lambda: self.setFixedSize(self.minimumSizeHint()))
 
+        self.checked_init = False
+        QTimer.singleShot(0, self.quit_if_not_checked)
+
+    def post_init_check(self):
+        self.checked_init = True
+        if any(len(d) == 0 for d in [self.input_state, self.output_state]):
+            error_quit("Malformed virtual board; must reinitialize input state and output state")
+            QTimer.singleShot(0, QApplication.quit)
+        else:
+            self.latest = self.input_state.copy()
+            self.previous = self.latest.copy() # start: previous is 0 too
+
+    def quit_if_not_checked(self):
+        if not self.checked_init:
+            error_quit(f"Subclass must call {Fore.CYAN}{Style.BRIGHT}post_init_check(){Style.RESET_ALL}")
+            QTimer.singleShot(0, QApplication.quit)
+
     def reset_inputs(self):
         for w in self.input_widgets:
             w.reset_device()
@@ -151,6 +187,33 @@ class BaseGUIWindow(EmptyWindow):
             self.last_few_fps.clear()
         self.last_time = new_time
 
+    def update_server(self):
+        if not self.paused:
+            # only sends the ones that changed
+            send_message(str(dict_diff(self.latest, self.previous)), self.sock)
+            self.previous.update(self.latest)
+        else:
+            send_message("", self.sock)
+
+
+    def update_input_state(self, updates: Mapping[str, int | bool]):
+        for key, state in updates.items():
+            self.input_state[key] = int(state) # allows bools for flag vars
+            self.input_changed.emit(self.input_state)
+
+
+    def update_latest(self, new_latest: dict):
+        self.latest.update(new_latest)
+
+
+    @Slot(object)
+    def set_output_state(self, new_output_state: dict):
+        self.output_state.update(new_output_state)
+        self.update_display_devices()
+
+    def update_display_devices(self):
+        error_quit("Virtual board must override update_display_devices()!")
+
 class ListenThread(QThread):
     def __init__(self, window: BaseGUIWindow):
         super().__init__()
@@ -159,6 +222,7 @@ class ListenThread(QThread):
         self.listener_done = window.listener_done
         self.have_quit = window.have_quit
 
+    @override
     def run(self):
         window = self.window
         sock = window.sock
@@ -192,7 +256,6 @@ class ListenThread(QThread):
 
 class Runner:
     def __init__(self) -> None:
-
         if sys.platform != 'win32':
             # reconstruct socket from regular file descriptor
             self.sock = reconstruct_socket_unix(int(sys.argv[2]))
