@@ -198,7 +198,7 @@ def int_to_bool_list(num: int, width: int, *, invert: bool = False):
     else:
         return [not x for x in (false_prefix + partial_list)]
 
-def dict_diff[T: Mapping](new: T, old: T) -> T:
+def dict_diff(new: dict, old: dict):
     '''Assumes: new and old have all the same keys. Returns a dict with only
     the changed key-vals. Sadly: cannot require old and new to have the same
     exact type — just matches their supertypes — so type-checker will not get

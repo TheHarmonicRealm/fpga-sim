@@ -187,6 +187,8 @@ class _ForbidFilter(QObject):
     def __init__(self, /, parent: QObject | None = None, *, objectName: str | None = None) -> None:
         super().__init__(parent, objectName=objectName)
         self.cant_cursor = False
+
+    @override
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:
         if isinstance(event, QEnterEvent):
             if not self.cant_cursor:
@@ -223,7 +225,7 @@ class AppStyle(QProxyStyle):
         super().__init__("fusion")
 
     @override
-    def pixelMetric(self, metric, option=None, widget=None):
+    def pixelMetric(self, metric, option=None, widget=None): # pyright: ignore[reportMissingParameterType]
         match metric: # modify size of checkboxes
             case QStyle.PixelMetric.PM_IndicatorWidth if isinstance(widget, SwitchCheckbox):
                 return c.Sizes.switch.width()
