@@ -26,7 +26,7 @@ class InputDict(TypedDict, total=False):
 
 class MainWindow(BaseGUIWindow):
     def __init__(self, program_name: str, sock: socket.socket):
-        super().__init__(sock, program_name, "classic", show_reset = True, target_fps=120, sleep_resolution=.00005)
+        super().__init__(sock, program_name, "switches", show_reset = True, target_fps=120, sleep_resolution=.00005)
 
         self.output_state = OutputDict(lights=0)
         self.input_state = InputDict(switches=0)
