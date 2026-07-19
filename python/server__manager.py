@@ -309,6 +309,7 @@ if __name__ == "__main__":
 
             match command:
                 case BuildLiveCommand(files, expected_inputs, expected_outputs):
+                    Path("./user_inputs").mkdir(exist_ok=True)
                     build_live(conn, files, expected_inputs, expected_outputs)
                 case StartLiveCommand():
                     live_sim(conn)
