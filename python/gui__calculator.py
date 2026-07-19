@@ -2,27 +2,17 @@
 Launched as subprocess from client__shell.py
 '''
 
-import base64
 import socket
-import sys
-import threading
-from typing import TypedDict
+from typing import TypedDict, override
 
-from colorama import Fore, Style
-from gui__base import BaseGUIWindow
-from gui__util import reconstruct_socket_unix, reconstruct_socket_windows
+import gui__constants as c
+from gui__base import BaseGUIWindow, Runner
 from gui__widgets import (
     BoardComponents,
     NormalButton,
-    hbox_factory,
-    int_to_bool_list,
-    make_app,
     vbox_factory,
 )
-import gui__constants as c
-from PySide6.QtCore import QTimer, Qt, Slot
-from PySide6.QtWidgets import QApplication, QGridLayout, QLayout, QSizePolicy, QSpacerItem
-from shared__util import dict_diff, send_message
+from PySide6.QtWidgets import QGridLayout, QSizePolicy
 
 
 class OutputDict(TypedDict, total=True):
@@ -33,16 +23,16 @@ class OutputDict(TypedDict, total=True):
 
 class InputDict(TypedDict, total=False):
     # non-total to allow sending just diffs up
-    B0: int
-    B1: int
-    B2: int
-    B3: int
-    B4: int
-    B5: int
-    B6: int
-    B7: int
-    B8: int
-    B9: int
+    b0: int
+    b1: int
+    b2: int
+    b3: int
+    b4: int
+    b5: int
+    b6: int
+    b7: int
+    b8: int
+    b9: int
     equals: int
     clear: int
     divide: int
@@ -51,11 +41,11 @@ class InputDict(TypedDict, total=False):
     add: int
 
 class MainWindow(BaseGUIWindow):
-    def __init__(self, program_name: str, sock: socket.socket, listener_done: threading.Event, have_quit: threading.Event):
-        super().__init__(sock, listener_done, have_quit, program_name, "calculator", show_reset = False, target_fps=120, sleep_resolution=.00005)
+    def __init__(self, program_name: str, sock: socket.socket):
+        super().__init__(sock, program_name, "calculator", show_reset = False, target_fps=120, sleep_resolution=.00005)
 
         self.output_state = OutputDict(matrix=0, select=0)
-        self.input_state = InputDict(B0 = 0, B1 = 0, B2 = 0, B3 = 0, B4 = 0, B5 = 0, B6 = 0, B7 = 0, B8 = 0, B9 = 0, equals = 0, clear = 0, divide = 0, multiply = 0, subtract = 0, add = 0)
+        self.input_state = InputDict(b0=0, b1=0, b2=0, b3=0, b4=0, b5=0, b6=0, b7=0, b8=0, b9=0, equals=0, clear=0, divide=0, multiply=0, subtract=0, add=0)
 
         self.display = BoardComponents.DotMatrixGroup(4, 3, 5, inter_spacing=6)
 
@@ -75,7 +65,7 @@ class MainWindow(BaseGUIWindow):
             [self.calc_nums[7], self.calc_nums[8], self.calc_nums[9], self.div_btn],
             [self.calc_nums[4], self.calc_nums[5], self.calc_nums[6], self.mul_btn],
             [self.calc_nums[1], self.calc_nums[2], self.calc_nums[3], self.sub_btn],
-            [self.clr_btn,           self.calc_nums[0], self.eql_btn,           self.add_btn],
+            [self.clr_btn,      self.calc_nums[0], self.eql_btn,      self.add_btn],
         ]
 
         for row in range(0, 4):
@@ -84,96 +74,28 @@ class MainWindow(BaseGUIWindow):
                 self.calc_area.setColumnStretch(col, 0)
             self.calc_area.setRowStretch(row, 0)
 
-        self.latest = self.input_state.copy()
-        self.previous = self.latest.copy() # start: previous is 0 too
-
-        self.should_quit = False
-
-        self.input_changed.connect(self.update_latest)
-        self.output_changed.connect(self.set_output_state)
-        self.close_signal.connect(self.quit_program)
 
         self.model_interaction_box.addLayout(
             vbox_factory(
                 self.display,
                 self.calc_area
-                
             )
         )
 
-        self.pinged.connect(self.update_fps)
-        self.input_time.connect(self.update_server)
-
-        QTimer.singleShot(0, lambda: self.setFixedSize(self.minimumSizeHint()))
+        self.post_init_check()
 
     def make_calc_button(self, label: str, key: str):
         b = NormalButton(label, None, font_points=c.Sizes.calc_button_font, mono=True)
         b.setFixedHeight(c.Sizes.calc_button_height)
         # ignore policy for horizontal makes it minimum (trial and error tbh)
         b.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Minimum)
-        b.state_changed.connect(lambda s: self.update_input_state(key, int(s)))
+        b.state_changed.connect(lambda s: self.update_input_state({key: int(s)}))
         return b
 
-    @Slot(object)
-    def set_output_state(self, new_output_state: OutputDict):
-        self.output_state.update(new_output_state)
+    @override # mandatory to override this!!!
+    def update_display_devices(self):
         self.display.set(self.output_state["matrix"], self.output_state["select"])
 
-    def update_input_state(self, key: str, state: int):
-        self.input_state[key] = state
-        self.input_changed.emit(self.input_state)
-    
-    def ready_quit(self):
-        self.should_quit = True
-
-    @Slot()
-    def quit_program(self):
-        # get app instance, then close window before quitting app
-        app: QApplication = QApplication.instance() # pyright: ignore[reportAssignmentType]
-        self.close()
-        app.exit()
-
-
-    def update_server(self):
-        if not self.paused:
-            # only sends the ones that changed
-            send_message(str(dict_diff(self.latest, self.previous)), self.sock)
-            self.previous.update(self.latest)
-        else:
-            send_message("", self.sock)
-
-
-    def update_latest(self, new_latest: InputDict):
-        self.latest.update(new_latest)
-
-
-def run_app(program_name: str, sock: socket.socket, listener_done: threading.Event, have_quit: threading.Event):
-    app = make_app()
-    window = MainWindow(program_name, sock, listener_done, have_quit)
-    # pin to top at start (ignored on Wayland)
-    window.set_on_top(True)
-    app.exec()
-    return app
 
 if __name__ == "__main__":
-    listener_done = threading.Event()
-    have_quit = threading.Event()
-
-    if sys.platform != 'win32':
-        # reconstruct socket from regular file descriptor
-        sock = reconstruct_socket_unix(int(sys.argv[2]))
-    else: # make socket from received output of socket.share()
-        socket_share_data = base64.b64decode(sys.stdin.buffer.read())
-        sock = reconstruct_socket_windows(socket_share_data)
-
-    program_name = sys.argv[1]
-
-    run_app(program_name, sock, listener_done, have_quit)
-
-    # app has been quit. tell server we are quitting then wait for
-    #   listener to get ACK back. Necessary to have a "clean" socket on exit
-    #   for main program to continue with as normal
-    have_quit.set()
-    send_message("exit", sock)
-    listener_done.wait()
-    print("Exited live sim!")
+    Runner().run(MainWindow)

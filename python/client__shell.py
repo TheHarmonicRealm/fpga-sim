@@ -16,7 +16,7 @@ from html import escape
 from pathlib import Path
 from sys import argv
 from tomllib import TOMLDecodeError
-from typing import IO, NoReturn
+from typing import IO, NoReturn, override
 
 from client__paths import (
     board_data,
@@ -30,7 +30,6 @@ from client__paths import (
 )
 from colorama import Fore, Style
 from prompt_toolkit import HTML, PromptSession, print_formatted_text, prompt
-from prompt_toolkit.application import get_app
 from prompt_toolkit.completion import (
     CompleteEvent,
     Completer,
@@ -40,7 +39,6 @@ from prompt_toolkit.completion import (
 )
 from prompt_toolkit.document import Document
 from prompt_toolkit.history import InMemoryHistory
-from prompt_toolkit.key_binding import KeyBindings, KeyPressEvent
 from prompt_toolkit.shortcuts import CompleteStyle, clear
 from shared__util import (
     AckMessage,
@@ -329,7 +327,9 @@ class FolderNameCompleter(Completer):
     def __init__(self, folder: Path) -> None:
         self.folder = folder
         super().__init__()
-    def get_completions(self, document: Document, complete_event: CompleteEvent): 
+
+    @override
+    def get_completions(self, document: Document, complete_event: CompleteEvent):
         word = document.get_word_before_cursor(WORD=True) # splits only by whitespace (i.e. allows the . in .vcd)
         for thing in get_folder_names(self.folder):
             if thing.startswith(word) and self.folder.joinpath(thing).is_dir():
@@ -339,6 +339,8 @@ class FileNameCompleter(Completer):
     def __init__(self, folder: Path) -> None:
         self.folder = folder
         super().__init__()
+
+    @override
     def get_completions(self, document: Document, complete_event: CompleteEvent):
         word = document.get_word_before_cursor(WORD=True)
         for thing in get_file_names(self.folder):
@@ -346,7 +348,8 @@ class FileNameCompleter(Completer):
                 yield Completion(thing, start_position=-len(word))
 
 class WaveformSimCompleter(Completer):
-    def get_completions(self, document, complete_event): # pyright: ignore[reportMissingParameterType
+    @override
+    def get_completions(self, document: Document, complete_event: CompleteEvent):
         split_line = document.text.split()[1:]
         args_length = len(split_line)
         if document.text.endswith(" "):
@@ -359,7 +362,8 @@ class WaveformSimCompleter(Completer):
             yield from FileNameCompleter(waveforms_folder).get_completions(document, complete_event)
 
 class BuildLiveSimCompleter(Completer):
-    def get_completions(self, document, complete_event): # pyright: ignore[reportMissingParameterType
+    @override
+    def get_completions(self, document: Document, complete_event: CompleteEvent):
         split_line = document.text.split()[1:]
         args_length = len(split_line)
         if document.text.endswith(" "):

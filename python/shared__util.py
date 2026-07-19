@@ -5,7 +5,7 @@ import ast
 import dataclasses as dc
 import os
 import socket
-from collections.abc import Mapping
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 import textwrap
@@ -198,7 +198,7 @@ def int_to_bool_list(num: int, width: int, *, invert: bool = False):
     else:
         return [not x for x in (false_prefix + partial_list)]
 
-def dict_diff[T: Mapping](new: T, old: T) -> T:
+def dict_diff(new: dict, old: dict):
     '''Assumes: new and old have all the same keys. Returns a dict with only
     the changed key-vals. Sadly: cannot require old and new to have the same
     exact type — just matches their supertypes — so type-checker will not get
@@ -211,3 +211,9 @@ def dict_diff[T: Mapping](new: T, old: T) -> T:
 def indent_text(in_str: str, depth: int=1):
     '''indents x number of 4-space "tabs"'''
     return textwrap.indent(in_str, (" " * 4) * depth)
+
+def first_matching[T](li: list[T], fn: Callable[[Any], bool]) -> T:
+    for i in li:
+        if fn(i):
+            return i
+    raise RuntimeError("first_matching() had unexpected error: Element not found in list!")
