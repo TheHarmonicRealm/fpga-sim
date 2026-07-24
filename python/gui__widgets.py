@@ -207,6 +207,7 @@ def pseudo_disable(w: QWidget, tooltip: str, *, checked: bool | None = None):
     w._forbid_filter = _ForbidFilter() # pyright: ignore[reportAttributeAccessIssue]
     w.installEventFilter(w._forbid_filter) # pyright: ignore[reportAttributeAccessIssue]
     w.setToolTip(tooltip)
+    w.blockSignals(True)
     if checked is not None:
         try:
             w.setChecked(checked) # pyright: ignore[reportAttributeAccessIssue]
