@@ -431,13 +431,13 @@ autocomplete for commands, and, in the second argument position, folder names
 for `waveform_sim`/`build_live_sim`. There is also up/down history browsing
 like in a real shell.
 
-#### Creating more live simulator "boards"
+#### Creating more live simulator "virtual boards"
 
 Starting with v2, this program can support multiple live simulator boards
-without needing a new Docker image. Currently, this requires some knowledge of
+without changes to the Docker image. Currently, this requires some knowledge of
 Python and a little knowledge of Qt, with new simulators needing two parts:
 * A Python script of any name (though I recommend naming it like the others,
-prefaced with `gui__`) stored in the `python` folder. Base this on one
+prefaced with `board__`) stored in the `python` folder. Base this on one
 of the provided boards.
 * New entries in the `user_board_data.toml` file to point to the file and list
 the widths of the new board's input and output ports.
@@ -445,7 +445,7 @@ the widths of the new board's input and output ports.
     merge conflicts when updating via `git pull`.
 
 > [!Caution]
-> `gui__base.py` and its dependencies (`gui__widgets.py` etc.) are currently 
+> `board__base.py` and its dependencies (`gui__widgets.py` etc.) are currently 
 > liable to change dramatically. I will stabilize them more eventually.
 > For now, if you are distributing custom boards, please consider copying the
 > files they import under another name for maximum reliability.

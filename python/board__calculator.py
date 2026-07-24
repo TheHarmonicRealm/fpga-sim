@@ -6,7 +6,7 @@ import socket
 from typing import TypedDict, override
 
 import gui__constants as c
-from gui__base import BaseGUIWindow, Runner
+from board__base import BaseGUIWindow, Runner
 from gui__widgets import (
     BoardComponents,
     NormalButton,

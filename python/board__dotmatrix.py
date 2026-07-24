@@ -6,7 +6,7 @@ import socket
 from typing import TypedDict, override
 
 
-from gui__base import BaseGUIWindow, Runner
+from board__base import BaseGUIWindow, Runner
 from gui__widgets import (
     BoardComponents,
     int_to_bool_list,
