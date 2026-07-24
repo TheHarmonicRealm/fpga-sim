@@ -75,11 +75,6 @@ def set_color(button: QPushButton | QRadioButton, color: str | QColor):
     palette.setColor(role, color) # Modify palette copy
     button.setPalette(palette) # Apply modified palette
 
-def mix_colors(color1: QColor, color2: QColor):
-    # Finds the "middle color" of two colors through simple averaging.
-    # Not perception adjusted or anything.
-    return QColor(round(color1.red()/2 + color2.red()/2), round(color1.green()/2 + color2.green()/2), round(color1.blue()/2 + color2.blue()/2))
-
 class EmptyWindow(QMainWindow):
     def __init__(self, title: str):
         super().__init__()
