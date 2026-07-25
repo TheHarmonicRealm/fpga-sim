@@ -242,10 +242,7 @@ class AppStyle(QProxyStyle):
             case _:
                 super().drawControl(element, option, painter, widget)
 
-def make_app(argv: list[str] = []):
-    app = QApplication(argv)
-    app.setStyle(AppStyle())
-    return app
+
 
 # The below classes are used inside BoardComponents.
 

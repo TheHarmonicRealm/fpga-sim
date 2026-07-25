@@ -11,11 +11,8 @@ from typing import Final, override
 from colorama import Fore, Style
 from gui__util import reconstruct_socket_unix, reconstruct_socket_windows
 from gui__widgets import (
-    EmptyWindow,
+    AppStyle,
     InputWidget,
-    hbox_factory,
-    make_app,
-    
 )
 from PySide6.QtCore import QDeadlineTimer, QThread, QTimer, Signal, Slot
 from PySide6.QtWidgets import QApplication, QLabel
@@ -261,7 +258,8 @@ class Runner:
             self.sock = reconstruct_socket_windows(socket_share_data)
 
         self.program_name = sys.argv[1]
-        self.app = make_app()
+        self.app = QApplication()
+        self.app.setStyle(AppStyle())
 
     def run(self, c: type[BaseGUIWindow]):
         # make a window. TODO: Runner really doesn't need to be the creator
