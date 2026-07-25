@@ -1,7 +1,7 @@
 import os
 import sys
 import threading
-from collections.abc import Callable
+
 from enum import Enum, auto
 from typing import Literal, overload, override
 
@@ -52,28 +52,8 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from qt_helpers import PushButton, hbox_factory, vbox_factory
 from shared__util import bool_list_to_int, int_to_bool_list
-
-
-def set_color(button: QPushButton | QRadioButton, color: str | QColor):
-    '''Sets the most relevant color of the given widget using palettes.
-    May expand to more widgets at some point eventually.'''
-
-    palette = button.palette() # Copy original palette to modify
-
-    if isinstance(color, str): # Construct QColor if given string
-        color = QColor(color)
-
-    match button:
-        case QPushButton():
-            role = QPalette.ColorRole.Button
-        case QRadioButton():
-            role = QPalette.ColorRole.Base
-        case _:
-            raise TypeError(f"set_color() given bad-type widget {button}")
-
-    palette.setColor(role, color) # Modify palette copy
-    button.setPalette(palette) # Apply modified palette
 
 class EmptyWindow(QMainWindow):
     def __init__(self, title: str):
@@ -131,88 +111,7 @@ class EmptyWindow(QMainWindow):
         self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, enable)
         self.show()
 
-# Narrow type so type checker is happy with vbox/hbox calls
-@overload
-def __box_factory(*stuff: QLayout | QWidget, vertical: Literal[True], no_margins: bool = True) -> QVBoxLayout: ...
-@overload
-def __box_factory(*stuff: QLayout | QWidget, vertical: Literal[False], no_margins: bool = True)  -> QHBoxLayout: ...
 
-def __box_factory(*stuff: QLayout | QWidget, vertical: bool, no_margins: bool = True):
-    box = QVBoxLayout() if vertical else QHBoxLayout()
-    for item in stuff:
-        if isinstance(item, QLayout):
-            box.addLayout(item)
-        elif isinstance(item, QWidget):
-            box.addWidget(item)
-        else:
-            raise TypeError(f"__box_factory() (helper to [vbox|hbox]_factory) passed non-layout/widget {item} of type {type(item)}!")
-    if no_margins:
-        box.setContentsMargins(0, 0, 0, 0)
-    return box
-
-def vbox_factory(*stuff: QLayout | QWidget, no_margins: bool = True) -> QVBoxLayout:
-    return __box_factory(*stuff, vertical=True, no_margins=no_margins)
-
-def hbox_factory(*stuff: QLayout | QWidget, no_margins: bool = True) -> QHBoxLayout:
-    return __box_factory(*stuff, vertical=False, no_margins=no_margins)
-
-def make_button(text: str, function: Callable, *, tooltip: str=""):
-    bt = QPushButton(text)
-    bt.pressed.connect(function)
-    if tooltip:
-        bt.setToolTip(tooltip)
-    return bt
-
-def make_checkbox(text: str, function: Callable[[bool], ], *, checked: bool=False, tooltip: str=""):
-    cb = QCheckBox(text)
-    cb.toggled.connect(function)
-    cb.setChecked(checked)
-    if tooltip:
-        cb.setToolTip(tooltip)
-    return cb
-
-def make_action(name: str,  function: Callable, shortcut: QKeySequence | str, parent: QObject):
-    ac = QAction(name, parent)
-    ac.setShortcut(shortcut)
-    ac.setAutoRepeat(False)
-    ac.triggered.connect(function)
-    return ac
-
-class _ForbidFilter(QObject):
-    def __init__(self, /, parent: QObject | None = None, *, objectName: str | None = None) -> None:
-        super().__init__(parent, objectName=objectName)
-        self.cant_cursor = False
-
-    @override
-    def eventFilter(self, watched: QObject, event: QEvent) -> bool:
-        if isinstance(event, QEnterEvent):
-            if not self.cant_cursor:
-                try:
-                    watched.setCursor(Qt.CursorShape.ForbiddenCursor) # pyright: ignore[reportAttributeAccessIssue]
-                except AttributeError:
-                    print(f"_ForbidFilter: Can't set cursor of a {watched.__qualname__}")
-                    self.cant_cursor = True
-                return True
-        if isinstance(event, QMouseEvent):
-            return True
-        else:
-            return QObject.eventFilter(self, watched, event)
-
-def pseudo_disable(w: QWidget, tooltip: str, *, checked: bool | None = None):
-    '''Makes a widget act disabled, adding a ForbiddenCursor. Sets opacity low,
-    prevents keyboard focus and ignores mouse clicks, sets a tooltip, and sets
-    check state if desired.'''
-    w.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-    w.setGraphicsEffect(QGraphicsOpacityEffect(w, opacity=.5))
-    w._forbid_filter = _ForbidFilter() # pyright: ignore[reportAttributeAccessIssue]
-    w.installEventFilter(w._forbid_filter) # pyright: ignore[reportAttributeAccessIssue]
-    w.setToolTip(tooltip)
-    w.blockSignals(True)
-    if checked is not None:
-        try:
-            w.setChecked(checked) # pyright: ignore[reportAttributeAccessIssue]
-        except AttributeError:
-            print(f"pseudo_disable(): can't check/uncheck a {w.__qualname__}!")
 
 class AppStyle(QProxyStyle):
     '''Applied to checkboxes in `make_switch_checkbox()` to make them look like
@@ -357,7 +256,7 @@ class SwitchCheckbox(QCheckBox):
         super().__init__(parent)
         self.setFixedSize(c.Sizes.switch)
 
-class StickyButton(QPushButton):
+class StickyButton(PushButton):
     '''Button with somewhat custom style that stays down if shift is held when
     released. Style is overridden in AppStyle, mainly because the default's
     state is quite hard to read in dark mode on both Mac and Windows 11.'''
@@ -395,7 +294,7 @@ class SegmentType(Enum):
     BOTTOM_RIGHT = auto()
     DP = auto()
 
-class LightDisplay(QPushButton):
+class LightDisplay(PushButton):
     '''Misused QPushButton used to emulate a light with a fade effect.'''
     def __init__(self, *,
                 size: QSize | None = c.Sizes.light,
@@ -411,7 +310,7 @@ class LightDisplay(QPushButton):
         self.off_color = QColor(off_color)
         self.light_on = False
         self.setDisabled(True)
-        set_color(self, self.off_color)
+        self.set_color(self.off_color)
         
         if size is not None:
             self.setFixedSize(size)
@@ -447,7 +346,7 @@ class LightDisplay(QPushButton):
                 if self.fade_on:
                     self.on_animation.start()
                 else:
-                    set_color(self, self.on_color)
+                    self.set_color(self.on_color)
             else:
                 if self.fade_on:
                     self.on_animation.stop()

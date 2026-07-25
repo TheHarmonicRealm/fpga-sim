@@ -11,8 +11,9 @@ from gui__widgets import (
     BoardComponents,
     int_to_bool_list,
     hbox_factory,
-    vbox_factory,
 )
+
+from qt_helpers import vbox_factory, hbox_factory
 
 
 class OutputDict(TypedDict, total=True):

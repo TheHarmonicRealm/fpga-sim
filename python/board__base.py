@@ -14,16 +14,13 @@ from gui__widgets import (
     EmptyWindow,
     InputWidget,
     hbox_factory,
-    make_action,
     make_app,
-    make_button,
-    make_checkbox,
-    pseudo_disable,
-    vbox_factory,
+    
 )
 from PySide6.QtCore import QDeadlineTimer, QThread, QTimer, Signal, Slot
 from PySide6.QtWidgets import QApplication, QLabel
 from shared__util import big_receive, dict_diff, send_message
+from qt_helpers import vbox_factory, hbox_factory, make_action, make_button, make_checkbox, pseudo_disable
 
 
 def deserialize_dict(d: str) -> dict:
