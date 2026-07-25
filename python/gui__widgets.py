@@ -55,61 +55,6 @@ from PySide6.QtWidgets import (
 from qt_helpers import PushButton, hbox_factory, vbox_factory
 from shared__util import bool_list_to_int, int_to_bool_list
 
-class EmptyWindow(QMainWindow):
-    def __init__(self, title: str):
-        super().__init__()
-        self.setWindowTitle(title)
-
-        self.main_layout = QVBoxLayout()
-        central_widget = QWidget()
-        central_widget.setLayout(self.main_layout)
-        self.setCentralWidget(central_widget)
-        self.shift_pressed = threading.Event()
-
-        self.is_wayland = "WAYLAND_DISPLAY" in os.environ
-
-    # Make window draggable from anywhere
-    # (Added to allow moving while frameless)
-    @override
-    def mousePressEvent(self, event: QMouseEvent):
-        # if not filtered, right-click is wonky on Ubuntu/Wayland
-        if event.button() == Qt.MouseButton.LeftButton:
-            self.windowHandle().startSystemMove()
-
-    @override
-    def keyPressEvent(self, event: QKeyEvent):
-        key = event.key()
-        if key == Qt.Key.Key_Shift:
-            self.shift_pressed.set()
-    @override
-    def keyReleaseEvent(self, event: QKeyEvent):
-        key = event.key()
-        if key == Qt.Key.Key_Shift:
-            self.shift_pressed.clear()
-
-    
-    def set_frameless(self, enable: bool):
-        self.setWindowFlag(Qt.WindowType.FramelessWindowHint, enable)
-
-        if sys.platform == 'win32':
-            if not enable:
-                # nudge a tiny bit to fix issue where size is wrong after
-                #   made frameful, then wait a tiny bit before going home
-                target_pos = self.pos() - QPoint(0, 30) 
-                QTimer.singleShot(0, lambda: self.move(self.pos() + QPoint(1, 0)))
-                QTimer.singleShot(50, lambda: self.move(target_pos))
-            else: # move down by size of top bar
-                QTimer.singleShot(0, lambda: self.move(self.pos() + QPoint(0, 30)))
-        elif sys.platform == 'darwin':
-            if enable:
-                self.move(self.pos() + QPoint(0, 28))
-            else:
-                self.move(self.pos() + QPoint(0, -28))
-        self.show()
-
-    def set_on_top(self, enable: bool):
-        self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, enable)
-        self.show()
 
 
 
