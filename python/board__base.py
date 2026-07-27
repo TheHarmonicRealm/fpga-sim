@@ -12,7 +12,7 @@ from colorama import Fore, Style
 from gui__util import reconstruct_socket_unix, reconstruct_socket_windows
 from gui__widgets import (
     AppStyle,
-    InputWidget,
+    BoardInput,
 )
 from PySide6.QtCore import QDeadlineTimer, QThread, QTimer, Signal, Slot
 from PySide6.QtWidgets import QApplication, QLabel
@@ -66,7 +66,7 @@ class BaseGUIWindow(EmptyWindow):
         #   constructor, so the signals aren't connected yet
         QTimer.singleShot(0, self.listen_thread.start)
 
-        self.input_widgets: list[InputWidget] = []
+        self.input_widgets: list[BoardInput] = []
 
         # first two are redefined in subclasses. defined here to avoid type-checker errors
         #   in shared functions

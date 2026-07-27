@@ -8,8 +8,8 @@ from typing import TypedDict, override
 import gui__constants as c
 from board__base import BaseGUIWindow, Runner
 from gui__widgets import (
-    BoardComponents,
-    NormalButton,
+    DotMatrixGroup,
+    BoardButton,
     vbox_factory,
 )
 from PySide6.QtWidgets import QGridLayout, QSizePolicy
@@ -47,7 +47,7 @@ class MainWindow(BaseGUIWindow):
         self.output_state = OutputDict(matrix=0, select=0)
         self.input_state = InputDict(b0=0, b1=0, b2=0, b3=0, b4=0, b5=0, b6=0, b7=0, b8=0, b9=0, equals=0, clear=0, divide=0, multiply=0, subtract=0, add=0)
 
-        self.display = BoardComponents.DotMatrixGroup(4, 3, 5, inter_spacing=6)
+        self.display = DotMatrixGroup(4, 3, 5, inter_spacing=6)
 
         self.calc_area = QGridLayout()
         self.calc_area.setSpacing(1)
@@ -85,7 +85,7 @@ class MainWindow(BaseGUIWindow):
         self.post_init_check()
 
     def make_calc_button(self, label: str, key: str):
-        b = NormalButton(label, None, font_points=c.Sizes.calc_button_font, mono=True)
+        b = BoardButton(label, None, font_points=c.Sizes.calc_button_font, mono=True)
         b.setFixedHeight(c.Sizes.calc_button_height)
         # ignore policy for horizontal makes it minimum (trial and error tbh)
         b.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Minimum)

@@ -8,7 +8,10 @@ from typing import TypedDict, override
 
 from board__base import BaseGUIWindow, Runner
 from gui__widgets import (
-    BoardComponents,
+    BoardLightsArray,
+    BoardSwitchesArray,
+    SevenSegmentGroup,
+    PlusButtons,
     int_to_bool_list
 )
 
@@ -39,10 +42,11 @@ class MainWindow(BaseGUIWindow):
         self.output_state = OutputDict(lights=0, dp=0b1, anode=0b1111, segment=0b111_111)
         self.input_state = InputDict(UB=0, DB=0, LB=0, RB=0, CB=0, switches=0)
 
-        self.plus_buttons = BoardComponents.Buttons(self.shift_pressed)
-        self.four_digits = BoardComponents.FourDigits()
-        self.lights_line = BoardComponents.Lights()
-        self.switches_line = BoardComponents.Switches()
+
+        self.plus_buttons = PlusButtons(self.shift_pressed)
+        self.four_digits = SevenSegmentGroup(4)
+        self.lights_line = BoardLightsArray(16)
+        self.switches_line = BoardSwitchesArray(16)
 
         self.input_widgets += [self.plus_buttons, self.switches_line]
 
