@@ -51,7 +51,7 @@ class MainWindow(BaseGUIWindow):
         self.input_widgets += [self.plus_buttons, self.switches_line]
 
         self.switches_line.state_changed.connect(lambda x: self.update_input_state({"switches": x}))
-        self.plus_buttons.state_changed.connect(lambda x: self.update_input_state(dict(zip(["UB", "DB", "LB", "RB", "CB"], int_to_bool_list(x, 5)))))
+        self.plus_buttons.state_changed.connect(self.update_input_state)
 
         self.model_interaction_box.addLayout(
             vbox_factory(

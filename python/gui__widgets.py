@@ -82,25 +82,28 @@ class StickyButton(QPushButton, BoardInput):
     '''Button with somewhat custom style that stays down if shift is held when
     released. Style is overridden in AppStyle, mainly because the default's
     state is quite hard to read in dark mode on both Mac and Windows 11.'''
-    sticky_press = Signal()
-    sticky_release = Signal()
+
+    # TODO: rewrite click logic — it is not quite matched to expected behavior.
+    #   for example, if you click while it is checked and drag the mouse off
+    #   before releasing, it will unexpectedly uncheck.
+    state_changed = Signal(bool)
     def __init__(self, shift_pressed: threading.Event, size: QSize = c.Sizes.light):
         super().__init__()
         self.setFixedSize(size)
         self.setCheckable(True)
-        self.released.connect(self.maybe_uncheck)
         self.shift_pressed = shift_pressed
 
+        self.released.connect(self.maybe_uncheck)
         self.pressed.connect(self.handle_press_emit)
         self.toggled.connect(self.handle_release_emit)
 
     def handle_press_emit(self):
         if not self.isChecked():
-            self.sticky_press.emit()
+            self.state_changed.emit(True)
 
     def handle_release_emit(self, now_checked: bool):
         if not now_checked:
-            self.sticky_release.emit()
+            self.state_changed.emit(False)
     
     def maybe_uncheck(self):
         if self.isChecked() and not self.shift_pressed.is_set():
@@ -147,8 +150,9 @@ class BoardSwitchesArray(QWidget, BoardInput):
 
 
 class PlusButtons(QWidget, BoardInput):
-    state_changed = Signal(int)
-    def __init__(self, shift_pressed: threading.Event):
+    state_changed = Signal(dict) # contains dict of button keys -> bool, in
+                                 # practice always holding only one item
+    def __init__(self, shift_pressed: threading.Event, button_keys: list[str] = ["UB", "DB", "LB", "RB", "CB"]):
         super().__init__()
         layout_hook = QGridLayout()
         self.setLayout(layout_hook)
@@ -158,12 +162,14 @@ class PlusButtons(QWidget, BoardInput):
         self.BTNL = StickyButton(shift_pressed)
         self.BTNR = StickyButton(shift_pressed)
         self.BTNC = StickyButton(shift_pressed)
-
+        
         self.buttons_list = [self.BTNU, self.BTND, self.BTNL, self.BTNR, self.BTNC]
 
-        for button in self.buttons_list:
-            button.sticky_press.connect(lambda b=button: self.state_changed.emit(self.__get_input_state(b)))
-            button.sticky_release.connect(lambda: self.state_changed.emit(self.__get_input_state()))
+        try:
+            for button, name in zip(self.buttons_list, button_keys, strict=True):
+                button.state_changed.connect(lambda x, n=name: self.state_changed.emit({n: x}))
+        except ValueError as e:
+            raise ValueError("PlusButtons(): button_keys must be 5 long!") from e
 
         layout_hook.addWidget(self.BTNU, 0, 1)
         layout_hook.addWidget(self.BTND, 2, 1)
@@ -172,11 +178,6 @@ class PlusButtons(QWidget, BoardInput):
         layout_hook.addWidget(self.BTNC, 1, 1)
         layout_hook.setSpacing(5)
         layout_hook.setSizeConstraint(QLayout.SizeConstraint.SetFixedSize)
-
-    def __get_input_state(self, new_button: StickyButton | None = None) :
-        # new_button is forced to true if provided; it is currently pressed but not checked
-        output_list = [b.isChecked() if b is not new_button else True for b in self.buttons_list]
-        return bool_list_to_int(output_list)
     
     @override
     def reset_device(self):
