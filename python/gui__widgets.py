@@ -117,6 +117,7 @@ class StickyButton(QPushButton, BoardInput):
 class BoardSwitch(QCheckBox, BoardInput):
     '''Checkbox that has the appearance of a vertical on/off switch, if
     style is applied'''
+    state_changed = QCheckBox.toggled
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setFixedSize(c.Sizes.switch)
@@ -138,7 +139,7 @@ class BoardSwitchesArray(QWidget, BoardInput):
         self.setLayout(layout_hook)
 
         for checkbox in self.checkboxes:
-            checkbox.toggled.connect(lambda: self.state_changed.emit(self.__get_input_state()))
+            checkbox.state_changed.connect(lambda: self.state_changed.emit(self.__get_input_state()))
 
     def __get_input_state(self) -> int:
         return bool_list_to_int([checkbox.isChecked() for checkbox in self.checkboxes])
