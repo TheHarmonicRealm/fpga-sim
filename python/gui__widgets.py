@@ -152,7 +152,7 @@ class BoardSwitchesArray(QWidget, BoardInput):
 class PlusButtons(QWidget, BoardInput):
     state_changed = Signal(dict) # contains dict of button keys -> bool, in
                                  # practice always holding only one item
-    def __init__(self, shift_pressed: threading.Event, button_keys: list[str] = ["UB", "DB", "LB", "RB", "CB"]):
+    def __init__(self, shift_pressed: threading.Event, button_keys: list[str]):
         super().__init__()
         layout_hook = QGridLayout()
         self.setLayout(layout_hook)

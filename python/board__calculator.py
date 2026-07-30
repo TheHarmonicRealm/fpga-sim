@@ -8,8 +8,8 @@ from typing import TypedDict, override
 import gui__constants as c
 from board__base import BaseGUIWindow, Runner
 from gui__widgets import (
-    DotMatrixGroup,
     BoardButton,
+    DotMatrixGroup,
     vbox_factory,
 )
 from PySide6.QtWidgets import QGridLayout, QSizePolicy

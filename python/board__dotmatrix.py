@@ -5,18 +5,15 @@ Launched as subprocess from client__shell.py
 import socket
 from typing import TypedDict, override
 
-
 from board__base import BaseGUIWindow, Runner
 from gui__widgets import (
-    PlusButtons,
-    DotMatrixGroup,
     BoardLightsArray,
     BoardSwitchesArray,
-    int_to_bool_list,
+    DotMatrixGroup,
+    PlusButtons,
     hbox_factory,
 )
-
-from qt_helpers import vbox_factory, hbox_factory
+from qt_helpers import hbox_factory, vbox_factory
 
 
 class OutputDict(TypedDict, total=True):
@@ -42,7 +39,7 @@ class MainWindow(BaseGUIWindow):
         self.output_state = OutputDict(matrix=0, select=0, lights=0)
         self.input_state = InputDict(UB=0, DB=0, LB=0, RB=0, CB=0, switches=0)
 
-        self.plus_buttons = PlusButtons(self.shift_pressed)
+        self.plus_buttons = PlusButtons(self.shift_pressed, ["UB", "DB", "LB", "RB", "CB"])
         self.four_digits = DotMatrixGroup(4, 3, 7)
         self.lights_line = BoardLightsArray(16)
         self.switches_line = BoardSwitchesArray(16)
