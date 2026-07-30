@@ -18,9 +18,9 @@ from PySide6.QtCore import QDeadlineTimer, QThread, QTimer, Signal, Slot
 from PySide6.QtWidgets import QApplication, QLabel
 from qt_helpers import (
     EmptyWindow,
+    PushButton,
     hbox_factory,
     make_action,
-    make_button,
     make_checkbox,
     pseudo_disable,
     vbox_factory,
@@ -89,8 +89,8 @@ class BaseGUIWindow(EmptyWindow):
         self.fps_counter = QLabel(f"<code>{underscore_str}/{target_fps}</code> FPS")
 
         self.paused = False
-        self.pause_play_button = make_button("Pause", self.pause_play, tooltip="Shortcut: P")
-        self.reset_inputs_button = make_button("Reset inputs", self.reset_inputs, tooltip="Shortcut: R")
+        self.pause_play_button = PushButton.new("Pause", self.pause_play, tooltip="Shortcut: P")
+        self.reset_inputs_button = PushButton.new("Reset inputs", self.reset_inputs, tooltip="Shortcut: R")
 
 
         self.frameless_checkbox = make_checkbox("Frameless", self.set_frameless)

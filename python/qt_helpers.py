@@ -51,10 +51,6 @@ class PushButton(QPushButton):
             b.setToolTip(tooltip)
         return b
 
-
-def make_button(text: str, function: Callable, *, tooltip: str=""):
-    return PushButton.new(text, function, tooltip=tooltip)
-
 def make_checkbox(text: str, function: Callable[[bool], ], *, checked: bool=False, tooltip: str=""):
     cb = QCheckBox(text)
     cb.toggled.connect(function)
