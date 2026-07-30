@@ -5,14 +5,9 @@ Launched as subprocess from client__shell.py
 import socket
 from typing import TypedDict, override
 
-
-from gui__base import BaseGUIWindow, Runner
-from gui__widgets import (
-    BoardComponents,
-    int_to_bool_list,
-    hbox_factory,
-    vbox_factory,
-)
+from board__base import BaseGUIWindow, Runner
+from qt_helpers import hbox_factory, vbox_factory
+from gui__widgets import BoardLightsArray, BoardSwitchesArray
 
 
 class OutputDict(TypedDict, total=True):
@@ -31,8 +26,8 @@ class MainWindow(BaseGUIWindow):
         self.output_state = OutputDict(lights=0)
         self.input_state = InputDict(switches=0)
 
-        self.lights_line = BoardComponents.Lights()
-        self.switches_line = BoardComponents.Switches()
+        self.lights_line = BoardLightsArray(16)
+        self.switches_line = BoardSwitchesArray(16)
 
         self.input_widgets += [self.switches_line]
 

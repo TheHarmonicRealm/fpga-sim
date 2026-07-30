@@ -11,18 +11,20 @@ from typing import Final, override
 from colorama import Fore, Style
 from gui__util import reconstruct_socket_unix, reconstruct_socket_windows
 from gui__widgets import (
+    AppStyle,
+    BoardInput,
+)
+from PySide6.QtCore import QDeadlineTimer, QThread, QTimer, Signal, Slot
+from PySide6.QtWidgets import QApplication, QLabel
+from qt_helpers import (
     EmptyWindow,
-    InputWidget,
+    PushButton,
     hbox_factory,
     make_action,
-    make_app,
-    make_button,
     make_checkbox,
     pseudo_disable,
     vbox_factory,
 )
-from PySide6.QtCore import QDeadlineTimer, QThread, QTimer, Signal, Slot
-from PySide6.QtWidgets import QApplication, QLabel
 from shared__util import big_receive, dict_diff, send_message
 
 
@@ -64,7 +66,7 @@ class BaseGUIWindow(EmptyWindow):
         #   constructor, so the signals aren't connected yet
         QTimer.singleShot(0, self.listen_thread.start)
 
-        self.input_widgets: list[InputWidget] = []
+        self.input_widgets: list[BoardInput] = []
 
         # first two are redefined in subclasses. defined here to avoid type-checker errors
         #   in shared functions
@@ -87,8 +89,8 @@ class BaseGUIWindow(EmptyWindow):
         self.fps_counter = QLabel(f"<code>{underscore_str}/{target_fps}</code> FPS")
 
         self.paused = False
-        self.pause_play_button = make_button("Pause", self.pause_play, tooltip="Shortcut: P")
-        self.reset_inputs_button = make_button("Reset inputs", self.reset_inputs, tooltip="Shortcut: R")
+        self.pause_play_button = PushButton.new("Pause", self.pause_play, tooltip="Shortcut: P")
+        self.reset_inputs_button = PushButton.new("Reset inputs", self.reset_inputs, tooltip="Shortcut: R")
 
 
         self.frameless_checkbox = make_checkbox("Frameless", self.set_frameless)
@@ -264,7 +266,8 @@ class Runner:
             self.sock = reconstruct_socket_windows(socket_share_data)
 
         self.program_name = sys.argv[1]
-        self.app = make_app()
+        self.app = QApplication()
+        self.app.setStyle(AppStyle())
 
     def run(self, c: type[BaseGUIWindow]):
         # make a window. TODO: Runner really doesn't need to be the creator

@@ -5,14 +5,14 @@ Launched as subprocess from client__shell.py
 import socket
 from typing import TypedDict, override
 
-
-from gui__base import BaseGUIWindow, Runner
+from board__base import BaseGUIWindow, Runner
 from gui__widgets import (
-    BoardComponents,
-    int_to_bool_list,
-    hbox_factory,
-    vbox_factory,
+    BoardLightsArray,
+    BoardSwitchesArray,
+    PlusButtons,
+    SevenSegmentGroup,
 )
+from qt_helpers import hbox_factory, vbox_factory
 
 
 class OutputDict(TypedDict, total=True):
@@ -39,15 +39,16 @@ class MainWindow(BaseGUIWindow):
         self.output_state = OutputDict(lights=0, dp=0b1, anode=0b1111, segment=0b111_111)
         self.input_state = InputDict(UB=0, DB=0, LB=0, RB=0, CB=0, switches=0)
 
-        self.plus_buttons = BoardComponents.Buttons(self.shift_pressed)
-        self.four_digits = BoardComponents.FourDigits()
-        self.lights_line = BoardComponents.Lights()
-        self.switches_line = BoardComponents.Switches()
+
+        self.plus_buttons = PlusButtons(self.shift_pressed, ["UB", "DB", "LB", "RB", "CB"])
+        self.four_digits = SevenSegmentGroup(4)
+        self.lights_line = BoardLightsArray(16)
+        self.switches_line = BoardSwitchesArray(16)
 
         self.input_widgets += [self.plus_buttons, self.switches_line]
 
         self.switches_line.state_changed.connect(lambda x: self.update_input_state({"switches": x}))
-        self.plus_buttons.state_changed.connect(lambda x: self.update_input_state(dict(zip(["UB", "DB", "LB", "RB", "CB"], int_to_bool_list(x, 5)))))
+        self.plus_buttons.state_changed.connect(self.update_input_state)
 
         self.model_interaction_box.addLayout(
             vbox_factory(
