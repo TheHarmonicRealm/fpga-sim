@@ -439,8 +439,8 @@ Python and a little knowledge of Qt, with new simulators needing two parts:
 * A Python script of any name (though I recommend naming it like the others,
 prefaced with `board__`) stored in the `python` folder. Base this on one
 of the provided boards.
-* New entries in the `user_board_data.toml` file to point to the file and list
-the widths of the new board's input and output ports.
+* New entries in the `board_data_user.toml` file (you must create that file) to
+point to the file and list the widths of the new board's input and output ports.
     * Base these on `board_data.toml` but place them here to not have
     merge conflicts when updating via `git pull`.
 
