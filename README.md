@@ -372,6 +372,8 @@ assignments and projects that use the software. Modifying it to have more
 or less buttons, more digits, and/or digits that aren't 3x5 pixels would not
 be hard for a moderately experienced programmer.
 
+My Verilog code to drive it is about 168 lines.
+
 **Apple game board**
 
 This board is designed for a simple game where the user moves a "bucket" left
@@ -379,6 +381,8 @@ and right to catch falling apples. It uses an SVG file, hiding and unhiding
 objects based on the Verilog model's state, mimicking the look of old LCD
 handhelds. Its inputs are left and right buttons and a restart button, and it
 has two pairs of dot matrix digits, to show the current and high scores.
+
+My Verilog code to drive it is about 350 lines.
 
 **Switches board**
 
