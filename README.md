@@ -35,18 +35,6 @@ experience, and I am working to make it even easier.
 | Classic     |      <video src="https://github.com/user-attachments/assets/bcf54133-e3f5-4eb3-a1d4-95b62fc99866"></video>           |       <video src="https://github.com/user-attachments/assets/5381d70a-d619-407b-9ad4-64616ce2cbae"></video>         |
 | Apple game   |      <video src="https://github.com/user-attachments/assets/464fec5e-8356-403a-a350-6039e3ffddb5"></video>           |       <video src="https://github.com/user-attachments/assets/39386f24-6605-4c13-9699-1892ebf06765"></video>         |
 
-
-
-
-
-
-
-
-
-
-
-
-
 ## System requirements
 
 <a id="os-hardware"></a>
