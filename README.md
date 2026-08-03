@@ -343,13 +343,9 @@ Three provide a clock signal, while one is very simple and does not.
 
 <summary>List of provided boards</summary>
 
-Example code for the first two boards is available at
-`verilog/live_sim/ex_classic` and `verilog/live_sim/ex_dotmatrix`. The
-calculator is way harder to make an example for without "giving it away" but a
-non-runnable template is at `verilog/live_sim/ex_calculator`. The final one,
-which is just the switches and LEDs from the first two boards, for an example
-of a board without a clock, made only for combinational logic, also does not
-have example code.
+Most of the boards come with example code. The calculator and apple game are 
+hard to make examples for without "giving it away", so their example programs
+are just non-runnable templates with the input and output lists set up.
 
 **Classic board**
 
@@ -373,8 +369,16 @@ This board has a dot-matrix display like the other board, but replaces
 the controls with the layout of a four-function calculator. Its display is
 3x5 pixels per digit. This is an example of what can be made for specific
 assignments and projects that use the software. Modifying it to have more
-or less buttons, more digits, and/or differently shaped digits would not be
-hard for a moderately experienced programmer.
+or less buttons, more digits, and/or digits that aren't 3x5 pixels would not
+be hard for a moderately experienced programmer.
+
+**Apple game board**
+
+This board is designed for a simple game where the user moves a "bucket" left
+and right to catch falling apples. It uses an SVG file, hiding and unhiding
+objects based on the Verilog model's state, mimicking the look of old LCD
+handhelds. Its inputs are left and right buttons and a restart button, and it
+has two pairs of dot matrix digits, to show the current and high scores.
 
 **Switches board**
 
