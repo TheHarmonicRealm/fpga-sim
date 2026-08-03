@@ -42,6 +42,7 @@ class Colors:
 
 class Sizes:
     light = QSize(14, 14)
+    mini_dotmatrix_light = QSize(10, 10)
     switch = QSize(14, 28)
 
     base_light_size = 10
