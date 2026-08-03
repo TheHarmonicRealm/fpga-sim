@@ -29,3 +29,8 @@ outputs = { select = 4, matrix = 15 }
 path = "board__switches.py"
 inputs = { switches = 16 }
 outputs = { lights = 16 }
+
+[boards.apple_game]
+path = "board__apple_game.py"
+inputs = { clk = 1, left = 1, right = 1, restart = 1 }
+outputs = { apple_spawn_row = 2, apple_left_col = 3, apple_center_col = 3, apple_right_col = 3, basket = 3, oof = 3, score_select = 2, score_pattern = 15, high_select = 2, high_pattern = 15 }

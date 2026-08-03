@@ -1,5 +1,4 @@
 import threading
-
 from enum import Enum, auto
 from typing import override
 
@@ -346,12 +345,12 @@ class SevenSegmentGroup(QWidget):
             digit.set_lights(cathode, dp, enable)
 
 class DotMatrixBlock(QWidget):
-    def __init__(self, rows: int, cols: int, spacing: int = 1):
+    def __init__(self, rows: int, cols: int, spacing: int = 1, light_size: QSize = c.Sizes.light):
         super().__init__()
         if rows < 1 or cols < 1:
                 raise ValueError(f"DotMatrixBlock must be 1+ column and 1+ row. Received: {rows}x{cols}!")
         self.rows, self.cols = rows, cols
-        self.lights = [BoardLight(on_color=c.Colors.DotMatrix.on, off_color=c.Colors.DotMatrix.off, fade_delay_time=c.segment_fade_delay_time, off_time=c.segment_off_time, fade_on=False) for _ in range(0, rows * cols)]
+        self.lights = [BoardLight(size=light_size, on_color=c.Colors.DotMatrix.on, off_color=c.Colors.DotMatrix.off, fade_delay_time=c.segment_fade_delay_time, off_time=c.segment_off_time, fade_on=False) for _ in range(0, rows * cols)]
 
         layout_hook = QGridLayout()
         layout_hook.setSpacing(spacing)
@@ -378,12 +377,12 @@ class DotMatrixBlock(QWidget):
                 light.set_light(state)
 
 class DotMatrixGroup(QWidget):
-    def __init__(self, count: int, width: int = 3, height: int = 5, inter_spacing: int = 4, intra_spacing: int = 1):
+    def __init__(self, count: int, width: int = 3, height: int = 5, inter_spacing: int = 4, intra_spacing: int = 1, light_size: QSize = c.Sizes.light):
         if count < 1:
             raise ValueError(f"DotMatrixGroup count must be >1. Received: {count}!")
         self.count = count
         super().__init__()
-        self.digits = [DotMatrixBlock(height, width, intra_spacing) for _ in range(count)]
+        self.digits = [DotMatrixBlock(height, width, intra_spacing, light_size) for _ in range(count)]
 
         self.layout_hook = hbox_factory(*self.digits, no_margins=True)
 

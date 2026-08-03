@@ -17,9 +17,10 @@ If you are an educator interested in using it for a class, please contact me via
 email or LinkedIn (both listed at my website, https://www.nobodybutnoah.com/).
 I would love to hear from people!
 
+
 ## Live sim demos
 
-This program provides four "virtual boards," three of which are shown here
+This program provides five "virtual boards," four of which are shown here
 running my own private Verilog example programs; if you are an instructor I can
 send you the Verilog source code to test the app on something less trivial than
 the public programs.
@@ -32,8 +33,7 @@ experience, and I am working to make it even easier.
 | Calculator  |  <video src="https://github.com/user-attachments/assets/108a40d1-4020-4faf-9412-b4e7bbbdb132"></video>   | <video src="https://github.com/user-attachments/assets/e49f20da-9169-4c5f-824d-552be7e8b0af"></video>
 | Dot matrix  |        <video src="https://github.com/user-attachments/assets/d38b5d25-d4c8-4af9-be07-1995f8975820"></video>         |      <video src="https://github.com/user-attachments/assets/d2a18546-ff38-4cd9-b04f-e3ec97e34079"></video>          |
 | Classic     |      <video src="https://github.com/user-attachments/assets/bcf54133-e3f5-4eb3-a1d4-95b62fc99866"></video>           |       <video src="https://github.com/user-attachments/assets/5381d70a-d619-407b-9ad4-64616ce2cbae"></video>         |
-
-
+| Apple game   |      <video src="https://github.com/user-attachments/assets/464fec5e-8356-403a-a350-6039e3ffddb5"></video>           |       <video src="https://github.com/user-attachments/assets/39386f24-6605-4c13-9699-1892ebf06765"></video>         |
 
 ## System requirements
 
@@ -343,13 +343,9 @@ Three provide a clock signal, while one is very simple and does not.
 
 <summary>List of provided boards</summary>
 
-Example code for the first two boards is available at
-`verilog/live_sim/ex_classic` and `verilog/live_sim/ex_dotmatrix`. The
-calculator is way harder to make an example for without "giving it away" but a
-non-runnable template is at `verilog/live_sim/ex_calculator`. The final one,
-which is just the switches and LEDs from the first two boards, for an example
-of a board without a clock, made only for combinational logic, also does not
-have example code.
+Most of the boards come with example code. The calculator and apple game are 
+hard to make examples for without "giving it away", so their example programs
+are just non-runnable templates with the input and output lists set up.
 
 **Classic board**
 
@@ -373,8 +369,20 @@ This board has a dot-matrix display like the other board, but replaces
 the controls with the layout of a four-function calculator. Its display is
 3x5 pixels per digit. This is an example of what can be made for specific
 assignments and projects that use the software. Modifying it to have more
-or less buttons, more digits, and/or differently shaped digits would not be
-hard for a moderately experienced programmer.
+or less buttons, more digits, and/or digits that aren't 3x5 pixels would not
+be hard for a moderately experienced programmer.
+
+My Verilog code to drive it is about 168 lines.
+
+**Apple game board**
+
+This board is designed for a simple game where the user moves a "bucket" left
+and right to catch falling apples. It uses an SVG file, hiding and unhiding
+objects based on the Verilog model's state, mimicking the look of old LCD
+handhelds. Its inputs are left and right buttons and a restart button, and it
+has two pairs of dot matrix digits, to show the current and high scores.
+
+My Verilog code to drive it is about 350 lines.
 
 **Switches board**
 
