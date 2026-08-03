@@ -262,6 +262,7 @@ class Runner:
             # reconstruct socket from regular file descriptor
             self.sock = reconstruct_socket_unix(int(sys.argv[2]))
         else: # make socket from received output of socket.share()
+            import base64
             socket_share_data = base64.b64decode(sys.stdin.buffer.read())
             self.sock = reconstruct_socket_windows(socket_share_data)
 
