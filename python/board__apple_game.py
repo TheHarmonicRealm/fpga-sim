@@ -2,10 +2,7 @@
 Launched as subprocess from client__shell.py
 '''
 
-import re
 import socket
-import xml.etree.ElementTree as ET
-from pathlib import Path
 from typing import TypedDict, override
 
 import gui__constants as c
@@ -15,12 +12,12 @@ from gui__widgets import (
     BoardButton,
     BoardLight,
     DotMatrixGroup,
+    SVGRenderer,
     hbox_factory,
     vbox_factory,
 )
 from PySide6.QtCore import QTimer
 from PySide6.QtGui import QPalette
-from PySide6.QtSvgWidgets import QSvgWidget
 from PySide6.QtWidgets import QApplication, QSizePolicy, QSpacerItem, QWidget
 from shared__util import dict_diff, int_to_bool_list
 
@@ -45,73 +42,7 @@ class InputDict(TypedDict, total=False):
     right: int
     restart: int
 
-class HideySVG:
-    def __init__(self, svg_path: Path) -> None:
-        svg_string = svg_path.read_text()
-
-        # take xlmns out, if present, before parsing
-        search_xmlns = re.search(r'xmlns="(.*)"', svg_string)
-        if search_xmlns is not None:
-            xmlns_version: str | None = search_xmlns.group(1)
-            svg_string = re.sub(f'xmlns="{xmlns_version}"', "", svg_string)
-        else:
-            xmlns_version = None
-
-        self.root = ET.fromstring(svg_string)
-
-        # restore xlmns if it was present
-        if xmlns_version is not None:
-            self.root.attrib["xlmns"] = xmlns_version
-
-    def get_string(self):
-        return ET.tostring(self.root, encoding='unicode')
-
-    def set_element_visibility(self, id: str, show: bool):
-        node = self.root.find(f".//*[@id='{id}']")
-        if node is None:
-            raise ValueError(f'No element with id "{id}"!')
-        else:
-            if show:
-                node.attrib["display"] = "inline"
-            else:
-                node.attrib["display"] = "none"
-            return ET.tostring(self.root, encoding='unicode')
-
-class SVGRenderer(QSvgWidget):
-    def __init__(self, svg_path: Path, state_dict: dict[str, bool], size: tuple[int, int]) -> None:
-        super().__init__()
-
-        self.our_svg = HideySVG(svg_path)
-
-        self.state_dict = state_dict
-        for id in self.state_dict:
-            self.our_svg.set_element_visibility(id, False)
-
-        self.refresh_image()
-        self.setFixedSize(*size)
-
-        self.LR = ["left", "right"]
-        self.LCR = ["left", "center", "right"]
-
-    def refresh_image(self):
-        svg_bytes = bytearray(self.our_svg.get_string(), encoding='utf-8')
-        self.renderer().load(svg_bytes)
-
-    def conv_dict(self, d: dict[str, int]):
-        raise NotImplementedError(f"{self.__qualname__} must override method conv_dict() of SVGRenderer!")
-
-    def set(self, d: dict[str, int]):
-        changes = dict_diff(self.conv_dict(d), self.state_dict)
-
-        if len(changes) > 0:
-            for key, val in changes.items():
-                self.our_svg.set_element_visibility(key, val)
-
-            self.state_dict.update(changes)
-
-            self.refresh_image()
-
-class GWRenderer(SVGRenderer):
+class GameRenderer(SVGRenderer):
     def __init__(self) -> None:
 
         state_dict = {
@@ -189,7 +120,7 @@ class MainWindow(BaseGUIWindow):
         w.setLayout(s_disp)
 
         try:
-            self.gw_renderer = GWRenderer()
+            self.gw_renderer = GameRenderer()
             self.model_interaction_box.addLayout(
                 vbox_factory(
                     self.gw_renderer,

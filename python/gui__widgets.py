@@ -1,5 +1,8 @@
+import re
 import threading
+import xml.etree.ElementTree as ET
 from enum import Enum, auto
+from pathlib import Path
 from typing import override
 
 import gui__constants as c
@@ -23,6 +26,7 @@ from PySide6.QtGui import (
     QPalette,
     QPen,
 )
+from PySide6.QtSvgWidgets import QSvgWidget
 from PySide6.QtWidgets import (
     QCheckBox,
     QGridLayout,
@@ -36,7 +40,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 from qt_helpers import PushButton, hbox_factory, vbox_factory
-from shared__util import bool_list_to_int, int_to_bool_list
+from shared__util import bool_list_to_int, dict_diff, int_to_bool_list
 
 
 class BoardInput:
@@ -404,6 +408,75 @@ class DotMatrixGroup(QWidget):
             digit.set_lights(pattern, enable)
 
 
+class HideySVG:
+    '''Parses an SVG file to an XML tree, and allows setting its elements'
+    visibility by ID (using display inline/none)'''
+    def __init__(self, svg_path: Path) -> None:
+        svg_string = svg_path.read_text()
+
+        # take xlmns out, if present, before parsing
+        search_xmlns = re.search(r'xmlns="(.*)"', svg_string)
+        if search_xmlns is not None:
+            xmlns_version: str | None = search_xmlns.group(1)
+            svg_string = re.sub(f'xmlns="{xmlns_version}"', "", svg_string)
+        else:
+            xmlns_version = None
+
+        self.root = ET.fromstring(svg_string)
+
+        # restore xlmns if it was present
+        if xmlns_version is not None:
+            self.root.attrib["xlmns"] = xmlns_version
+
+    def get_string(self):
+        return ET.tostring(self.root, encoding='unicode')
+
+    def set_element_visibility(self, id: str, show: bool):
+        node = self.root.find(f".//*[@id='{id}']")
+        if node is None:
+            raise ValueError(f'No element with id "{id}"!')
+        else:
+            if show:
+                node.attrib["display"] = "inline"
+            else:
+                node.attrib["display"] = "none"
+            return ET.tostring(self.root, encoding='unicode')
+
+class SVGRenderer(QSvgWidget):
+    '''Manages and renders a HideySVG. Must be subclassed;
+    see GameRenderer in board__apple_game for an example.'''
+    def __init__(self, svg_path: Path, state_dict: dict[str, bool], size: tuple[int, int]) -> None:
+        super().__init__()
+
+        self.our_svg = HideySVG(svg_path)
+
+        self.state_dict = state_dict
+        for id in self.state_dict:
+            self.our_svg.set_element_visibility(id, False)
+
+        self.refresh_image()
+        self.setFixedSize(*size)
+
+        self.LR = ["left", "right"]
+        self.LCR = ["left", "center", "right"]
+
+    def refresh_image(self):
+        svg_bytes = bytearray(self.our_svg.get_string(), encoding='utf-8')
+        self.renderer().load(svg_bytes)
+
+    def conv_dict(self, d: dict[str, int]):
+        raise NotImplementedError(f"{self.__qualname__} must override method conv_dict() of SVGRenderer!")
+
+    def set(self, d: dict[str, int]):
+        changes = dict_diff(self.conv_dict(d), self.state_dict)
+
+        if len(changes) > 0:
+            for key, val in changes.items():
+                self.our_svg.set_element_visibility(key, val)
+
+            self.state_dict.update(changes)
+
+            self.refresh_image()
 
 class AppStyle(QProxyStyle):
     '''Used on virtual boards to change the appearance of some widgets:
