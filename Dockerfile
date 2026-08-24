@@ -28,8 +28,8 @@
 FROM ubuntu:22.04@sha256:fed6ddb82c61194e1814e93b59cfcb6759e5aa33c4e41bb3782313c2386ed6df
 WORKDIR /usr/bin/
 
-
-# apt-get must always be run this way in Dockerfiles
+# apt-get must always be run this way in Dockerfiles:
+    # RUN apt-get update && apt-get install -y --no-install-recommends <packages list>
 
 # Verilator core dependencies, plus git to download it
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -44,8 +44,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libfl-dev; exit 0
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libfl2; exit 0
+
+# this one is not needed for my purposes but may be required for some GTKWave
+# stuff? it fails on Ubuntu 22.04
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    zlibc zlib1g zlib1g-dev; exit 0
+    zlibc; exit 0
+# at least the dev one was required to add FST generation support
+# (not needed at Verilator compile time -- zlib.h is needed to link at runtime)
+RUN apt-get update && apt-get install -y --no-install-recommends zlib1g zlib1g-dev
 
 
 # Download Verilator source to /usr/bin/
