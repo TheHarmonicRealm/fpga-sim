@@ -136,7 +136,8 @@ def verify_ports(candidate_input: dict[str, int], candidate_output: dict[str, in
         return ErrorMessage(repr(dicts))
     else:
         return AckMessage()
-def try_waveform_run(name: str, files: list[NamedFile]):
+
+def try_waveform_run(file_type: str, files: list[NamedFile]):
     names = [file.name for file in files]
     try:
         names.remove("tb.v")
@@ -147,49 +148,49 @@ def try_waveform_run(name: str, files: list[NamedFile]):
     # get the tb file to manipulate it (we know it is there)
     tb_file = first_matching(files, lambda x: x.name == "tb.v")
 
+    filename = f"temp.{file_type}"
+    output_path = Path(filename)
+    # Delete the output file in case a previous run put one there
+    output_path.unlink(missing_ok=True)
+
     if tb_file.content.find("$DUMP_FILENAME") == -1:
         return None, ErrorMessage("SRVRSEZ:Testbench did not include wildcard "
         "$DUMP_FILENAME; should have lines $dumpfile(\"$DUMP_FILENAME\"); "
         "and $dumpvars(0, tb);")
     else:
-        tb_file.content = Template(tb_file.content).safe_substitute(DUMP_FILENAME=name)
+        tb_file.content = Template(tb_file.content).safe_substitute(DUMP_FILENAME=filename)
 
-    # Delete the output file in case a previous run put one there
-    Path(name).unlink(missing_ok=True)
 
     for file in files:
         file.to_disk(Path("./user_inputs"))
 
     filenames_str = " ".join(names)
     envvars = environ.copy() | {"COMPILE_FILES": filenames_str, "CXXFLAGS": "-fdiagnostics-color"}
-    file_type = name.split(".")[-1]
 
     proc = subprocess.run(["/bin/bash", "./Waveform_Run.sh", file_type], stderr=subprocess.PIPE, env=envvars)
 
     match proc.returncode:
         case 0:
             try:
-                output_file = NamedFile.from_fp(open(name, "r"), close_after=True)
+                output_file = output_path.read_bytes()
             except FileNotFoundError:
                 return None, ErrorMessage("SRVRSEZ:Testbench ran successfully but did not "
-                f"output to file {name}; should have lines $dumpfile(\"$DUMP_FILENAME\"); and $dumpvars(0, tb);")
+                f"output to file; should have lines $dumpfile(\"$DUMP_FILENAME\"); and $dumpvars(0, tb);")
             return output_file, AckMessage()
         case _:
             return None, ErrorMessage(f"\n\n{proc.stderr.decode()}")
 
-def waveform_sim(sock: socket.socket, name: str, files: list[NamedFile]):
-    print(f"Name: {name}")
-    output_file, result = try_waveform_run(name, files)
+def waveform_sim(sock: socket.socket, file_type: str, files: list[NamedFile]):
+    waveform_bytes, result = try_waveform_run(file_type, files)
 
     sock.send(result.CODE.encode())
     send_message(serialize_dataclass(result), sock)
 
-    match output_file, result:
-        case None, ErrorMessage():
+    match result:
+        case ErrorMessage():
             pass # Already sent error message, nothing more to do
-        case NamedFile(), AckMessage():
-            send_message(serialize_dataclass(output_file), sock) # pyright: ignore[reportArgumentType]
-
+        case AckMessage():
+            send_message(waveform_bytes, sock) # pyright: ignore[reportArgumentType]
 
 def build_live(sock: socket.socket, files: list[NamedFile], expected_inputs: dict[str, int], expected_outputs: dict[str, int]):
     # Tries to make Verilog header. If it works, checks ports.
@@ -315,5 +316,5 @@ if __name__ == "__main__":
                     build_live(conn, files, expected_inputs, expected_outputs)
                 case StartLiveCommand():
                     live_sim(conn)
-                case WaveformSimCommand(name, files):
-                    waveform_sim(conn, name, files)
+                case WaveformSimCommand(file_type, files):
+                    waveform_sim(conn, file_type, files)

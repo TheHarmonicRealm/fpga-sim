@@ -87,7 +87,8 @@ def send_command(command: AnyCommand):
 def waveform_sim(input_files: list[NamedFile], output_path: Path, folder_name: str):
     global sock, vcd_viewer
 
-    command = WaveformSimCommand(output_path.name, input_files)
+    extension = str(output_path).split(".")[-1]
+    command = WaveformSimCommand(extension, input_files)
     t1 = time.time()
     send_command(command)
 
@@ -103,9 +104,8 @@ def waveform_sim(input_files: list[NamedFile], output_path: Path, folder_name: s
 
             result_start = f"{success_title()} Ran testbench simulation in {round((t2 - t1), 3)}s."
 
-            output_filename = big_receive(sock).decode()
-            output_file = deserialize_dataclass(output_filename, NamedFile)
-            output_file.to_disk(waveforms_folder)
+            waveform_data = big_receive(sock)
+            output_path.write_bytes(waveform_data)
 
             match vcd_viewer:
                 case "vaporview":
@@ -449,11 +449,12 @@ class ContinueException(Exception):
     pass
 
 def check_waveform_name(filename: str):
-    if filename.split(".")[-1] not in ["vcd"]: # TODO: add .fst
-        raise ContinueException(f'output argument "{filename}" must end with .vcd') # TODO: add "or .fst"
+    extension = filename.split(".")[-1]
+    if extension not in ["vcd", "fst"]:
+        raise ContinueException(f'output argument "{filename}" must end with .fst or .vcd')
     if filename != Path(filename).name:
         # will ultimately save directly to a defined output folder
-        raise ContinueException(f'output argument "{filename}" is a path, not a pure name (e.g. "wave.vcd")')
+        raise ContinueException(f'output argument "{filename}" is a path, not a pure name (e.g. "wave.fst")')
 
 def is_verilog(filename: str):
     extension = filename.split(".")[-1]

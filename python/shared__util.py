@@ -112,7 +112,7 @@ class StartLiveCommand:
 
 @dataclass
 class WaveformSimCommand:
-    output_filename: str
+    file_type: str # VCD or FST
     files: list[NamedFile]
 
     CODE: ClassVar[str] = "WS"
