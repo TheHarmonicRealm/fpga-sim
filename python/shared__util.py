@@ -81,6 +81,8 @@ def deserialize_dataclass[T: DataclassInstance](input: str, dc_type: type[T]) ->
 
 @dataclass
 class NamedFile:
+    '''A way to read and transmit, or receive and write, a **text** file.
+    Binary file types (such as FST) will crash this!'''
     name: str
     content: str
 
