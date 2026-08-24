@@ -103,8 +103,8 @@ def waveform_sim(input_files: list[NamedFile], output_path: Path, folder_name: s
 
             result_start = f"{success_title()} Ran testbench simulation in {round((t2 - t1), 3)}s."
 
-            file_message = big_receive(sock).decode()
-            output_file = deserialize_dataclass(file_message, NamedFile)
+            output_filename = big_receive(sock).decode()
+            output_file = deserialize_dataclass(output_filename, NamedFile)
             output_file.to_disk(waveforms_folder)
 
             match vcd_viewer:
@@ -448,9 +448,9 @@ def colorize(err: str, folder: str | None = None):
 class ContinueException(Exception):
     pass
 
-def check_vcd_name(filename: str):
-    if filename.split(".")[-1] != "vcd":
-        raise ContinueException(f'output argument "{filename}" must end with .vcd')
+def check_waveform_name(filename: str):
+    if filename.split(".")[-1] not in ["vcd"]: # TODO: add .fst
+        raise ContinueException(f'output argument "{filename}" must end with .vcd') # TODO: add "or .fst"
     if filename != Path(filename).name:
         # will ultimately save directly to a defined output folder
         raise ContinueException(f'output argument "{filename}" is a path, not a pure name (e.g. "wave.vcd")')
@@ -768,7 +768,7 @@ if __name__ == "__main__":
                                         raise ContinueException(f"{command} last arg should be -overwrite or a shortening of that.")
 
                                 # may raise ContinueException
-                                check_vcd_name(filename)
+                                check_waveform_name(filename)
                                 
                                 if (not overwrite) and output_path.is_file():
                                     raise ContinueException(f"cannot overwrite existing file {clickable_filepath(output_path, 1)}; pass -ov option if you wish to allow overwriting.")
