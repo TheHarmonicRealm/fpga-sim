@@ -156,11 +156,13 @@ def big_receive(sock: socket.socket):
         data.extend(packet)
     return data
 
-def send_message(message: str, sock: socket.socket):
+def send_message(message: str | bytes, sock: socket.socket):
     # With non-ASCII strings, length(str) < length(str.encode())
-    encoded = message.encode()
-    headered_message = f"{len(encoded):010}{message}"
-    sock.send(headered_message.encode())
+    if isinstance(message, str):
+        message = message.encode()
+    header = f"{len(message):010}".encode()
+    sock.send(header)
+    sock.send(message)
 
 def header_to_dc(header: str):
     match header:
