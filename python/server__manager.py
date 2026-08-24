@@ -162,7 +162,9 @@ def try_waveform_run(name: str, files: list[NamedFile]):
 
     filenames_str = " ".join(names)
     envvars = environ.copy() | {"COMPILE_FILES": filenames_str, "CXXFLAGS": "-fdiagnostics-color"}
-    proc = subprocess.run(["/bin/bash", "./Waveform_Run.sh"], stderr=subprocess.PIPE, env=envvars)
+    file_type = name.split(".")[-1]
+
+    proc = subprocess.run(["/bin/bash", "./Waveform_Run.sh", file_type], stderr=subprocess.PIPE, env=envvars)
 
     match proc.returncode:
         case 0:
