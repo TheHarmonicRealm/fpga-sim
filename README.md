@@ -96,8 +96,8 @@ highlighter
     * This program supports automaticaly opening with VSCode's
     [VaporView](https://marketplace.visualstudio.com/items?itemName=lramseyer.vaporview)
     extension, [GTKWave](https://gtkwave.github.io/gtkwave/index.html),
-    or [Surfer](https://gitlab.com/surfer-project/surfer), but any program that
-    can open .vcd files can be used manually
+    or [Surfer](https://gitlab.com/surfer-project/surfer)
+    * Any program that can open FST or VCD files can be used manually
 
 ## Installation walkthrough
 
@@ -155,7 +155,7 @@ Just like Docker Desktop, open it when the download finishes, and an
 installation process will start.
     * After VSCode is installed, install these two extensions:
         * [Verilog language support](https://marketplace.visualstudio.com/items?itemName=eirikpre.systemverilog)
-        * [VaporView](https://marketplace.visualstudio.com/items?itemName=lramseyer.vaporview) VCD viewer
+        * [VaporView](https://marketplace.visualstudio.com/items?itemName=lramseyer.vaporview) waveform viewer
 
 **If you are not using VSCode**:
 Install [GTKWave](https://gtkwave.github.io/gtkwave/index.html) or
@@ -164,8 +164,6 @@ found by the terminal from your system path. GTKWave is not recommended on
 Windows unless you are experienced with compiling software.
 [Surfer can also be used in the browser](https://app.surfer-project.org/)
 (without an auto-opening feature, and maybe with bad performance).
-If you use another VCD viewer and like it, please contact me and I may add it
-as an officially supported viewer to automatically open waveforms.
 
 4. Install uv:
 * Windows: use [uv's standalone Windows installer](https://docs.astral.sh/uv/getting-started/installation/#__tabbed_1_2)
@@ -312,7 +310,19 @@ having an ending command, will crash the simulator.
 All filenames must match their module names (i.e. `lights` ↔︎ `lights.v`, etc).
 This rule goes for live simulation, too.
 
-Run the testbench with `waveform_sim <input_directory> <output_filename.vcd> [-overwrite]`.
+> [!Note]
+> **FST or VCD?**
+> 
+> This program originally supported only VCD files for waveforms. These are
+long-standardized, but they are a limited and inefficient format.
+With v3, I added support for **FST files, which are now recommended.**
+This is a newer format developed for GTKWave and supported by VaporView and
+Surfer. FST is more efficient and adds some nice features; for example, it
+exports the names of SystemVerilog enums to display them in a viewer rather than
+showing them as bare constants. 
+
+Run the testbench with `waveform_sim <input_directory> <output_filename> [-overwrite]`,
+with the filename having .fst or .vcd as its extension.
 This may take a few minutes in extreme cases.
 
 > [!Note]  
@@ -329,8 +339,8 @@ any, to automatically open waveforms in. You can later change your setting
 by deleting the file `python/waveform_viewer_choice.txt` and running the
 program again.
 
-* **Example call:** `waveform_sim ex_tb wave.vcd`
-* **Example call (allowing overwrite):** `waveform_sim ex_tb wave.vcd -ov`
+* **Example call (no overwrite):** `waveform_sim ex_tb wave.fst`
+* **Example call (allowing overwrite):** `waveform_sim ex_tb wave.fst -ov`
 
 > [!Note]  
 > Unlike live simulation, testbench/waveform simulation does not have separate build and run steps.
