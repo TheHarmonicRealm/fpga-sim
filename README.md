@@ -5,10 +5,8 @@ students new to programming. It provides a friendly command-line interface, both
 to run Verilog testbenches and to run synthesizable code interactively on a
 "virtual FPGA board" (referred to as "live simulations").
 
-Primary development is on Mac, with significant testing on Windows and Ubuntu.
-The software has [low performance requirements](#os-hardware) and I believe it
-will run well on almost any computer from the past few years with a recent
-operating system.
+This app has [low hardware requirements](#os-hardware), and full support for
+Mac, Windows, and Ubuntu Linux.
 
 This software was first used in spring 2026 for ECE 2029
 (*Introduction to Digital Circuit Design*) at Worcester Polytechnic Institute
