@@ -6,7 +6,7 @@ to run Verilog testbenches and to run synthesizable code interactively on a
 "virtual FPGA board" (referred to as "live simulations").
 
 Primary development is on Mac, with significant testing on Windows and Ubuntu.
-The software has [low performance requirements](os-hardware) and I believe it
+The software has [low performance requirements](#os-hardware) and I believe it
 will run well on almost any computer from the past few years with a recent
 operating system.
 
