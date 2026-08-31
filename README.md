@@ -271,6 +271,15 @@ unusual startup delay.
 > You cannot run the script with a different command. uv ensures you are on the correct Python
 version and have the necessary packages available.
 
+* On first run it will have you enter an option to select the waveform
+viewer of your choice for the auto-open feature. If you do not require that
+feature, you can choose "none". If your selection cannot be found by the
+program, it will require you to close it and either fix this or change your
+setting to "none" before reopening.
+    * You MUST open a new terminal tab in order for the software to find new
+    programs added to your system path. If running in the original tab, it will
+    be stuck on the previous path.
+
 ## Program usage
 
 The client gives you a command-line interface (CLI), where it requests terminal
@@ -326,7 +335,7 @@ This may take a few minutes in extreme cases.
 > [!Note]  
 > On Windows, when a waveform sim is run and the output opens automatically in
 > VSCode, if it shows an error like "this file has an error and can't be opened",
-> delete the file in the `python` folder called `waveform_viewer_choice.txt`.
+> delete the file in the top folder called `settings.toml`.
 > Close the program, run it again, and enter "None" when prompted to choose a waveform viewer.
 
 If `-overwrite`, or any shortening of it (`-o` or longer), is provided as the
@@ -334,8 +343,7 @@ third argument, the output file will be overwritten if it already exists.
 Otherwise, an error is printed if it already exists, to avoid accidents.
 The first time you run this, it will have you choose which waveform viewer, if
 any, to automatically open waveforms in. You can later change your setting
-by deleting the file `python/waveform_viewer_choice.txt` and running the
-program again.
+by editng the file `settings.toml`.
 
 * **Example call (no overwrite):** `waveform_sim ex_tb wave.fst`
 * **Example call (allowing overwrite):** `waveform_sim ex_tb wave.fst -ov`
