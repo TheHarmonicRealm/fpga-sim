@@ -16,13 +16,13 @@ from html import escape
 from pathlib import Path
 from sys import argv
 from tomllib import TOMLDecodeError
-from typing import IO, NoReturn, override
+from typing import IO, Literal, NoReturn, override
 
 from client__paths import (
     board_data,
     docker_tag_filepath,
     live_sim_folder,
-    settings_filepath,
+    settings_toml,
     testbench_folder,
     top_folder,
     user_board_data,
@@ -85,7 +85,7 @@ def send_command(command: AnyCommand):
     send_message(str_command, sock)
 
 def waveform_sim(input_files: list[NamedFile], output_path: Path, folder_name: str):
-    global sock, vcd_viewer
+    global sock, waveform_viewer
 
     extension = str(output_path).split(".")[-1]
     command = WaveformSimCommand(extension, input_files)
@@ -107,9 +107,9 @@ def waveform_sim(input_files: list[NamedFile], output_path: Path, folder_name: s
             waveform_data = big_receive(sock)
             output_path.write_bytes(waveform_data)
 
-            match vcd_viewer:
-                case "vaporview":
-                    print(result_start, f"Opening {Style.BRIGHT}{Fore.CYAN}{clickable_filepath(output_path, 2)}{Style.RESET_ALL} in VaporView.")
+            match waveform_viewer:
+                case "code":
+                    print(result_start, f"Opening {Style.BRIGHT}{Fore.CYAN}{clickable_filepath(output_path, 2)}{Style.RESET_ALL} in VSCode.")
                     # removed all shell uses except this one. old comment I had
                     # said it doesn't work without shell on Windows
                     # auto-open feature is quite a pain on Windows!
@@ -448,6 +448,9 @@ def colorize(err: str, folder: str | None = None):
 class ContinueException(Exception):
     pass
 
+class SettingsFileIssue(Exception):
+    pass
+
 def check_waveform_name(filename: str):
     extension = filename.split(".")[-1]
     if extension not in ["vcd", "fst"]:
@@ -486,34 +489,39 @@ def crawl_input_directory(front_target: str, containing_folder: Path, folder_nam
     return [NamedFile.from_fp(open(file_path, "r"), close_after=True) for file_path in file_paths]
 
 def clickable_filepath(filepath: Path, depth: int):
-    return f"{Path(*filepath.parts[-depth:])}"
+    return f"./{Path(*filepath.parts[-depth:])}"
 
 def waveform_viewer_wizard():
-    print("Type in vaporview, surfer, gtkwave or none to select auto-open software, or exit to quit.")
-    print("Press tab to list these options or complete a partial entry.")
+    print("Which waveform viewer would you like to use? Enter any of these (tab completion is supported):")
+    print("* code: VSCode (requires extension, e.g. VaporView or Surfer")
+    print("* surfer: Surfer")
+    print("* gtkwave: GTKWave")
+    print("* none: disable auto-open")
     while True: # loop until they give a good option or enter exit
-        viewer_choice = prompt("-> ", completer=WordCompleter(["vaporview", "gtkwave", "surfer", "none"], sentence=True), complete_style=CompleteStyle.READLINE_LIKE).strip().lower()
+        viewer_choice = prompt("-> ", completer=WordCompleter(["code", "gtkwave", "surfer", "none"], sentence=True), complete_style=CompleteStyle.READLINE_LIKE).strip().lower()
 
         match viewer_choice:
-            case "vaporview":
-                print("VSCode/VaporView selected")
+            case "code":
+                print("VSCode selected.")
             case "gtkwave":
                 print("GTKWave selected.")
             case "surfer":
                 print("Surfer selected.")
             case "none":
-                viewer_choice = "NO_VIEWER"
                 print("No viewer chosen. Waveforms will not be automatically opened.")
+                viewer_choice = None
             case "exit":
-                exit(0)
+                error_exit("User exited during waveform viewer selection process.")
             case _:
-                print("Invalid choice.")
+                print("Invalid choice; press tab to see all options.")
                 continue
         break # avoided only by _ branch
 
-    settings_filepath.write_text(viewer_choice)
+    top_comment = f'# options: "code", "gtkwave", "surfer", or "none"'
+    text = f'waveform_viewer = \"{viewer_choice}\"'
+    settings_toml.write_text(f"{top_comment}\n{text}")
 
-    print("Choice has been saved to ./python/waveform_viewer_choice.txt")
+    print(f"Your choice has been saved to {clickable_filepath(settings_toml, 1)}")
 
     return viewer_choice
 
@@ -547,6 +555,54 @@ def error_exit(message: str, *, hint: str = "", cmd: str = "") -> NoReturn:
 class EmptyTomlException(ValueError):
     pass
 
+def normalize_waveform_viewer(v: str) -> None | Literal['code', 'gtkwave', 'surfer']:
+    viewer = v.lower()
+    if viewer in ["vscode", "vs code"]:
+        viewer = "code"
+    if viewer not in ["code", "gtkwave", "surfer", "none"]:
+        raise ValueError()
+    elif viewer == "none":
+        viewer = None # finally convert from string
+
+    return viewer # pyright: ignore[reportReturnType]
+
+def load_settings_from_file() -> None | Literal['code', 'gtkwave', 'surfer']:
+    try:
+        toml_text = settings_toml.read_text()
+    except FileNotFoundError:
+        raise SettingsFileIssue(f"{clickable_filepath(settings_toml, 1)} doesn't exist!")
+    except UnicodeDecodeError:
+        raise SettingsFileIssue(f"{clickable_filepath(settings_toml, 1)} is not text!")
+
+    if toml_text.isspace() or len(toml_text) == 0:
+        raise SettingsFileIssue(f"{clickable_filepath(settings_toml, 1)} is empty!")
+
+    try:
+        user_settings: dict[str, str] = tomllib.loads(toml_text)
+    except TOMLDecodeError:
+        raise SettingsFileIssue(f"{clickable_filepath(settings_toml, 1)} is invalid TOML!")
+    
+    try:
+        waveform_viewer = user_settings["waveform_viewer"]
+    except KeyError:
+        raise SettingsFileIssue(f"{clickable_filepath(settings_toml, 1)}'s waveform_viewer was missing!")
+    
+    try:
+        waveform_viewer = normalize_waveform_viewer(waveform_viewer)
+    except ValueError:
+        raise SettingsFileIssue(f"{clickable_filepath(settings_toml, 1)}'s waveform_viewer was invalid \"{waveform_viewer}\"!")
+
+    return waveform_viewer
+
+def verify_viewer(viewer: str, proper_name: str):
+    if shutil.which(viewer) is not None:
+        print(f"{proper_name} is selected to automatically open waveforms.")
+    else:
+        error_exit(f"<i>{proper_name}</i> could not be found!",
+            hint=f"Ensure it's in your path as \"{viewer}\", then relaunch "
+            "this program in a new terminal tab.")
+        exit(1)
+
 if __name__ == "__main__":
     if sys.prefix == sys.base_prefix: # if not in a venv give some guidance
         print("It appears this is being run without using the right uv environment; exiting.")
@@ -559,61 +615,25 @@ if __name__ == "__main__":
         # TODO: include exported HTML version of README for offline usage?
         exit(1)
 
-    if not settings_filepath.exists():
-        print("Waveform viewer is unset. Which viewer would you like to use?")
-        vcd_viewer = waveform_viewer_wizard()
-    else:
-        vcd_viewer = settings_filepath.read_text()
+    try:
+        waveform_viewer = load_settings_from_file()
+        print(f"Loaded viewer setting from {clickable_filepath(settings_toml, 1)}")
+    except SettingsFileIssue as e:
+        print(e)
+        print("Re-running setup process!")
+        waveform_viewer = waveform_viewer_wizard()
 
-        clear_message = "Delete/clear out ./python/waveform_viewer_choice.txt and run again to change the setting!"
-
-        match vcd_viewer:
-            case "vaporview":
-                if shutil.which("code") is not None:
-                    print("VSCode/VaporView is selected to automatically open waveforms.")
-                else:
-                    print("VSCode does not seem to be installed. It may need to be added to your path (under the key 'code');")
-                    print(" if you do this, you must restart the terminal for it to work.")
-                    print("Waveforms will not be automatically opened for this session!")
-                    vcd_viewer = "NO_VIEWER"
-
-                print(clear_message)
-            case "gtkwave":
-                if shutil.which("gtkwave") is not None:
-                    print("GTKWave is selected to automatically open waveforms.")
-                else:
-                    print("GTKWave does not seem to be installed. It may need to be added to your path (under the key 'gtkwave');")
-                    print(" if you do this, you must restart the terminal for it to work.")
-                    print(" Waveforms will not be automatically opened for this session!")
-                    vcd_viewer = "NO_VIEWER"
-
-                print(clear_message)
-            case "surfer":
-                if shutil.which("surfer") is not None:
-                    print("surfer is selected to automatically open waveforms.")
-                else:
-                    print("surfer does not seem to be installed. It may need to be added to your path (under the key 'gtkwave');")
-                    print(" if you do this, you must restart the terminal for it to work.")
-                    print(" Waveforms will not be automatically opened for this session!")
-                    vcd_viewer = "NO_VIEWER"
-
-                print(clear_message)
-            case "NO_VIEWER":
-                print("\"No viewer\" option was chosen. Waveforms will not be automatically opened.")
-                print(clear_message)
-            case _:
-                if vcd_viewer.strip() == "":
-                    # print message as if it were deleted if the file is just cleared
-                    print("Waveform viewer is unset. Which viewer would you like to use?")
-                else:
-                    print(f"./python/waveform_viewer_choice.txt has errant value.")
-                    print("Running selection wizard again.")
-                    print("Which viewer would you like to use?")
-                vcd_viewer = waveform_viewer_wizard()
-
-    if vcd_viewer == "NO_VIEWER":
-        vcd_viewer = None
-
+    # quit if viewer is not in system path
+    match waveform_viewer:
+        case "code":
+            # TODO: warn user if code --list-extensions doesn't show a known one?
+            verify_viewer(waveform_viewer, "VSCode")
+        case "gtkwave":
+            verify_viewer(waveform_viewer, "GTKWave")
+        case "surfer":
+            verify_viewer(waveform_viewer, "Surfer")
+        case _:
+            print("Auto-open is disabled per your setting.")
 
     try:
         socket_port = int(argv[1])
