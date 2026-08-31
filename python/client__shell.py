@@ -392,7 +392,7 @@ def get_server_image_tags():
     match proc.returncode:
         case 0:
             tags = proc.stdout.decode().strip()
-            if tags == "":
+            if len(tags) == 0:
                 return None
             else:
                 return tags.splitlines()
@@ -601,7 +601,26 @@ def verify_viewer(viewer: str, proper_name: str):
         error_exit(f"<i>{proper_name}</i> could not be found!",
             hint=f"Ensure it's in your path as \"{viewer}\", then relaunch "
             "this program in a new terminal tab.")
-        exit(1)
+
+def check_vscode_extensions():
+    # this is run after shutil.which("code") so no need to check again
+    proc = subprocess.run(["code", "--list-extensions"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    match proc.returncode:
+        case 0:
+            output = proc.stdout.decode().strip()
+            if len(output) == 0:
+                extensions = []
+            else:
+                extensions = output.splitlines()
+            for e in ["surfer-project.surfer", "lramseyer.vaporview"]:
+                if e in extensions:
+                    break
+            else:
+                print(warning_title(), "VSCode doesn't report having any "
+                "waveform viewer extensions installed "
+                "(checked for VaporView and Surfer). Auto-open might not work.")
+        case _: # really should not happen
+            error_exit("<i>code --list-extensions</i> failed!")
 
 if __name__ == "__main__":
     if sys.prefix == sys.base_prefix: # if not in a venv give some guidance
@@ -628,6 +647,7 @@ if __name__ == "__main__":
         case "code":
             # TODO: warn user if code --list-extensions doesn't show a known one?
             verify_viewer(waveform_viewer, "VSCode")
+            check_vscode_extensions()
         case "gtkwave":
             verify_viewer(waveform_viewer, "GTKWave")
         case "surfer":
