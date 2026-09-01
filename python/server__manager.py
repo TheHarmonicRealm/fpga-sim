@@ -27,12 +27,6 @@ from shared__util import (
     serialize_dataclass,
 )
 
-try:
-    from colorama import Fore, Style  # TODO: make it lazy import in the future
-    colorama_available = True
-except ModuleNotFoundError:
-    colorama_available = False
-
 msg_dict = dict[str, int]
 
 def deserialize_dict(d: str) -> msg_dict:
@@ -91,10 +85,7 @@ def live_sim(sock: socket.socket):
             else:
                 if not i_am_a_docker:
                     m = textwrap.indent(output_string, " " * 4)
-                    if colorama_available:
-                        print(f"{Fore.BLUE}{Style.BRIGHT}{m}{Style.RESET_ALL}")
-                    else:
-                        print(m)
+                    print(m)
                 verilog_prints.append(output_string)
 
         send_message(repr(verilog_prints), sock)
