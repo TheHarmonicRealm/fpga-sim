@@ -52,6 +52,20 @@ def build_all(arch: str, image_name: str):
     else:
         print_success(f"Both builds were successful!")
 
+    # TODO: this is pretty dumb and a hack after I realized the second shadows
+    # the first. Should figure out a docker build config for series builds
+    # and eliminate this.
+    print("Final step: 'rebuilding' both (should be instant due to caching) "
+          "to make both architectures available.")
+
+    try:
+        subprocess.check_call(["docker", "buildx", "build", "--platform", "linux/amd64,linux/arm64", "-t", image_name, "."])
+    except subprocess.CalledProcessError:
+        print_error(f"Final step failed (see Docker errors above)!")
+        exit(1)
+    else:
+        print_success("All done!")
+
 
 native_architecture = subprocess.run(["docker", "info", "--format", "'{{ .Architecture }}'"], stdout=subprocess.PIPE, check=True).stdout.decode()
 native_architecture = native_architecture.strip().strip("'") # has outer single quotes
