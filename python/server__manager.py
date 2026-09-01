@@ -44,52 +44,49 @@ def live_sim(sock: socket.socket):
         sock.send(AckMessage.CODE.encode())
         send_message(serialize_dataclass(AckMessage()), sock)
 
-    process = subprocess.Popen(executable_path, text=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-    in_pipe: IO[str] = process.stdin # pyright: ignore[reportAssignmentType]
-    out_pipe: IO[str] = process.stdout # pyright: ignore[reportAssignmentType]
+    with subprocess.Popen(executable_path, text=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE) as live_sim: 
+        # assertion is for type checking -- they are IOs because of pipe args
+        assert live_sim.stdin is not None and live_sim.stdout is not None
 
-    while(True):
-        inp = big_receive(conn).decode()
-        match inp:
-            case "exit":
-                print("Client requested live sim exit")
-                in_pipe.write("exit\n")
-                in_pipe.flush()
-                process.wait()
-                send_message("exit", conn)
-                print("Returning to main command loop")
-                break
-            case "": # Received empty: paused
-                continue
-            case _: # Otherwise input must be dataclass string
-                try: # Try to convert; if it fails print error rather than crash
-                    input_string = str(deserialize_dict(inp))
-                except ValueError as e:
-                    send_message(f"Failure with input {inp}: {e}", conn)
+        while(True):
+            client_input = big_receive(conn).decode()
+            match client_input:
+                case "exit":
+                    # tell live sim to quit. the with statement will wait() it
+                    print("exit", file=live_sim.stdin, flush=True)
+                    break
+                case "": # Received empty: paused
                     continue
+                case _: # Otherwise input must be dataclass string
+                    try: # If conversion fails, print error rather than crashing
+                        input_string = str(deserialize_dict(client_input))
+                    except ValueError as e:
+                        send_message(f"Failure with input {client_input}: {e}", conn)
+                        continue
 
-        in_pipe.write(input_string + "\n")
-        in_pipe.flush()
+            # send new input to process, triggering a step forward and output
+            print(input_string, file=live_sim.stdin, flush=True)
 
-        verilog_prints: list[str] = []
-        system_update_string: str = ""
+            verilog_prints: list[str] = []
+            system_update_string: str = ""
 
-        while True:
-            # receive strings until we get a system string
-            # we know system string is last because model eval is what triggers
-            # display prints and is called before sending state
-            output_string = out_pipe.readline().strip()
-            if output_string.startswith("secretkey"):
-                system_update_string = output_string[len("secretkey"):]
-                break
-            else:
-                if not i_am_a_docker:
-                    m = textwrap.indent(output_string, " " * 4)
-                    print(m)
-                verilog_prints.append(output_string)
+            while True:
+                # receive 0+ Verilog $display prints, then labeled state string
+                output_string = live_sim.stdout.readline()
+                if output_string.startswith("secretkey"):
+                    system_update_string = output_string[len("secretkey"):]
+                    break
+                else:
+                    if not i_am_a_docker:
+                        m = textwrap.indent(output_string, " " * 4)
+                        print(m)
+                    verilog_prints.append(output_string)
 
-        send_message(repr(verilog_prints), sock)
-        send_message(system_update_string, sock)
+            send_message(repr(verilog_prints), sock)
+            send_message(system_update_string, sock)
+
+    # finally tell client we exited. The with-statement ends with a wait() call.
+    send_message("exit", conn)
 
 def verify_ports(candidate_input: dict[str, int], candidate_output: dict[str, int], canonical_input: dict[str, int], canonical_output: dict[str, int]):
     i_extra_ports: dict[str, int] = {}
