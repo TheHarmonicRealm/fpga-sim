@@ -33,7 +33,6 @@ def deserialize_dict(d: str) -> msg_dict:
     return ast.literal_eval(d)
 
 executable_path = Path("./obj_dir/Vtop")
-backup_executable_path = Path("./executable_backup")
 
 def live_sim(sock: socket.socket):
     global executable_path
@@ -54,10 +53,11 @@ def live_sim(sock: socket.socket):
         match inp:
             case "exit":
                 print("Client requested live sim exit")
+                in_pipe.write("exit\n")
+                in_pipe.flush()
+                process.wait()
                 send_message("exit", conn)
                 print("Returning to main command loop")
-                # kill subprocess. Telling it to terminate then wait() doesn't seem to work?
-                process.kill()
                 break
             case "": # Received empty: paused
                 continue
@@ -65,7 +65,7 @@ def live_sim(sock: socket.socket):
                 try: # Try to convert; if it fails print error rather than crash
                     input_string = str(deserialize_dict(inp))
                 except ValueError as e:
-                    send_message(f"Failure with input {inp}: e", conn)
+                    send_message(f"Failure with input {inp}: {e}", conn)
                     continue
 
         in_pipe.write(input_string + "\n")
@@ -90,7 +90,6 @@ def live_sim(sock: socket.socket):
 
         send_message(repr(verilog_prints), sock)
         send_message(system_update_string, sock)
-    # TODO: properly close process. Writing "exit\n" and calling process.wait() hangs forever...
 
 def verify_ports(candidate_input: dict[str, int], candidate_output: dict[str, int], canonical_input: dict[str, int], canonical_output: dict[str, int]):
     i_extra_ports: dict[str, int] = {}
