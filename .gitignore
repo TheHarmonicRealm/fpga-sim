@@ -1,8 +1,6 @@
 __pycache__/
 .DS_Store
-host_server/
-docker_cache/
-python/waveform_viewer_choice.txt
+
 server_materials/Vtop.h
 
 board_data_user.toml
