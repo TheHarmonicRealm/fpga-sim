@@ -4,7 +4,8 @@ host_server/
 docker_cache/
 python/waveform_viewer_choice.txt
 server_materials/Vtop.h
-python/board_data_user.toml
+
+board_data_user.toml
 settings.toml
 
 # Allow examples in these

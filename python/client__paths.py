@@ -8,8 +8,9 @@ verilog_folder = top_folder.joinpath("verilog")  # fpga-sim/verilog/
 live_sim_folder = verilog_folder.joinpath("live_sim")
 testbench_folder = verilog_folder.joinpath("testbench")
 
-board_data = python_folder.joinpath("board_data.toml")
-user_board_data = python_folder.joinpath("board_data_user.toml")
+board_data = top_folder.joinpath("board_data.toml")
+user_board_data = top_folder.joinpath("board_data_user.toml")
+
 apple_game_svg = python_folder.joinpath("svg/apple_game.svg")
 
 settings_toml = top_folder.joinpath("settings.toml")
