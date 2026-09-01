@@ -465,14 +465,20 @@ prefaced with `board__`) stored in the `python` folder. Base this on one
 of the provided boards.
 * New entries in the `board_data_user.toml` file (you must create that file) to
 point to the file and list the widths of the new board's input and output ports.
-    * Base these on `board_data.toml` but place them here to not have
-    merge conflicts when updating via `git pull`.
+    * These have the same format as `board_data.toml`. The point of a second
+    file is to not have merge conflicts when updating via `git pull`.
 
 > [!Caution]
-> `board__base.py` and its dependencies (`gui__widgets.py` etc.) are currently 
-> liable to change dramatically. I will stabilize them more eventually.
-> For now, if you are distributing custom boards, please consider copying the
-> files they import under another name for maximum reliability.
+> `board__base.py` and its dependencies (`gui__widgets.py` etc.) may be changed
+> dramatically without any notice or warning. If you are distributing custom
+> boards, please consider copying and redistributing the files they import under
+> another name for maximum reliability.
+>
+> If you intend to use this software and add custom boards for a course and
+> would like a promise of stability, please feel free to contact me/raise an
+> issue on GitHub. I have cleaned them up to a large extent, so I don't think
+> they will change dramatically in an incompatible way, but I don't want to
+> make a promise before I have someone who says they would benefit from it.
 
 ## Updating the software
 
