@@ -520,15 +520,23 @@ Using this mode:
     <!-- TODO: maintain this script!!! perhaps could scrape the copying list from
     the Dockerfile somehow -->
     ```
-    uv run python/setup_host_server.py <path>
+    uv run python/setup_host_server.py [path] [-ov]
     ```
 
     With no arguments, this will place the server in `fpga-sim/host_server`, or
-    it otherwise will place it in `<path>/host_server`.
+    it otherwise will place it directly at `<path>`.
     A rule enforced by my setup script, which cannot be circumvented, is that
     **the path must contain no spaces**, because GNU make is used by the server.
     This script will also fail with a warning if Verilator has not yet been
     installed.
+
+    To update the native server, pass -ov as the last argument and the folder
+    will be overwritten.
+    
+    Unlike the Docker image, there is no verification of
+    server-client versions matching, but the script copies over the tag
+    file used to build images — you can manually check that the client and
+    server both have the same string (e.g. v3) listed in `docker_tag.txt`.
 
 2. Open the server's folder in a new terminal. The only dependencies for the
     server are included with Python, so uv is unnecessary here. Just run it
