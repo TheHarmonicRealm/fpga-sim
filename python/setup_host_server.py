@@ -45,7 +45,7 @@ to_copy = [
     top_folder.joinpath("server_materials/simulator_driver_template.cpp"),
     top_folder.joinpath("server_materials/string_dict_tools.cpp"),
     top_folder.joinpath("server_materials/string_dict_tools.h"),
-    top_folder.joinpath("server_materials/Waveform_Run.sh")
+    top_folder.joinpath("server_materials/run_waveform.sh")
     ]
 
 for file in to_copy:
