@@ -645,7 +645,6 @@ if __name__ == "__main__":
     # quit if viewer is not in system path
     match waveform_viewer:
         case "code":
-            # TODO: warn user if code --list-extensions doesn't show a known one?
             verify_viewer(waveform_viewer, "VSCode")
             check_vscode_extensions()
         case "gtkwave":
