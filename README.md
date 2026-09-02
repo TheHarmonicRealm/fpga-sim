@@ -514,6 +514,9 @@ Windows support for Verilator appears to be more rough; if you attempt to
 install Verilator and natively run the server on any platform, please let me
 know about your experience, successful or not!
 
+Verilator in the Docker container is pinned to **v5.046**. Use later versions
+at your own risk of incompatibility.
+
 Using this mode:
 1. From the top fpga-sim folder, set up the server with:
 
