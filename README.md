@@ -520,7 +520,7 @@ Using this mode:
     <!-- TODO: maintain this script!!! perhaps could scrape the copying list from
     the Dockerfile somehow -->
     ```
-    uv run python/setup_host_server.py [path] [-ov]
+    uv run setup_host_server.py [path] [-ov]
     ```
 
     With no arguments, this will place the server in `fpga-sim/host_server`, or

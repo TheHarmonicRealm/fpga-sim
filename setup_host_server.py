@@ -4,7 +4,7 @@ import shutil
 from pathlib import Path
 from sys import argv
 
-from client__paths import top_folder, docker_tag_filepath
+top_folder = Path(__file__).resolve().parent  # i.e. fpga-sim/
 
 if shutil.which("verilator") is None:
     print("Verilator is not in your terminal's path. Please install it or the server set up by this will not work.")
@@ -69,7 +69,7 @@ to_copy = [
     top_folder.joinpath("server_materials/string_dict_tools.cpp"),
     top_folder.joinpath("server_materials/string_dict_tools.h"),
     top_folder.joinpath("server_materials/run_waveform.sh"),
-    docker_tag_filepath
+    top_folder.joinpath("docker_tag.txt")
     ]
 
 for file in to_copy:
