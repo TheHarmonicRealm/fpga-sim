@@ -552,6 +552,10 @@ code.
     * If done right this would make it more feasible to install on lab computers
     for multiple users, though if that were to happen there would be new 
     security considerations I haven't really had in mind.
+* Support for four-state logic (X and Z) once it is added to Verilator
+([it is in active development](https://github.com/verilator/verilator/pull/7193)). 
+I don't think it would be worth adding to live sim, but once it
+is available it should be trivial to add to the testbench feature.
 
 ---
 †No warranty given by developer, etc.
