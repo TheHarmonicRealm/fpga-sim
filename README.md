@@ -332,12 +332,6 @@ Run the testbench with `waveform_sim <input_directory> <output_filename> [-overw
 with the filename having .fst or .vcd as its extension.
 This may take a few minutes in extreme cases.
 
-> [!Note]
-> VSCode auto-open is unreliable on many Windows devices for reasons beyond my
-> control, but in the VSCode integrated terminal you can ctrl-click the filename
-> printed after the simulation runs to (in my experience) reliably
-> open the files.
-
 If `-overwrite`, or any shortening of it (`-o` or longer), is provided as the
 third argument, the output file will be overwritten if it already exists.
 Otherwise, an error is printed if it already exists, to avoid accidents.
