@@ -130,8 +130,11 @@ $output_ports
         getline(std::cin, input);
         
         if(input == "{}" || input.empty()) {
-            // Empty string or empty dict sent: do nothing
-            // note that the latter doesn't happen under current design
+            // Empty dict or empty string sent: no change to input
+            // note that empty strings aren't ever sent under current design
+        }
+        else if(input == "exit") {
+            break; // Exit loop. Process is calling wait() on us rn!
         }
         else {
             update_inputs(input, input_ports_map);

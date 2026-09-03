@@ -27,19 +27,12 @@ from shared__util import (
     serialize_dataclass,
 )
 
-try:
-    from colorama import Fore, Style  # TODO: make it lazy import in the future
-    colorama_available = True
-except ModuleNotFoundError:
-    colorama_available = False
-
 msg_dict = dict[str, int]
 
 def deserialize_dict(d: str) -> msg_dict:
     return ast.literal_eval(d)
 
 executable_path = Path("./obj_dir/Vtop")
-backup_executable_path = Path("./executable_backup")
 
 def live_sim(sock: socket.socket):
     global executable_path
@@ -51,55 +44,49 @@ def live_sim(sock: socket.socket):
         sock.send(AckMessage.CODE.encode())
         send_message(serialize_dataclass(AckMessage()), sock)
 
-    process = subprocess.Popen(executable_path, text=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-    in_pipe: IO[str] = process.stdin # pyright: ignore[reportAssignmentType]
-    out_pipe: IO[str] = process.stdout # pyright: ignore[reportAssignmentType]
+    with subprocess.Popen(executable_path, text=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE) as live_sim: 
+        # assertion is for type checking -- they are IOs because of pipe args
+        assert live_sim.stdin is not None and live_sim.stdout is not None
 
-    while(True):
-        inp = big_receive(conn).decode()
-        match inp:
-            case "exit":
-                print("Client requested live sim exit")
-                send_message("exit", conn)
-                print("Returning to main command loop")
-                # kill subprocess. Telling it to terminate then wait() doesn't seem to work?
-                process.kill()
-                break
-            case "": # Received empty: paused
-                continue
-            case _: # Otherwise input must be dataclass string
-                try: # Try to convert; if it fails print error rather than crash
-                    input_string = str(deserialize_dict(inp))
-                except ValueError as e:
-                    send_message(f"Failure with input {inp}: e", conn)
+        while(True):
+            client_input = big_receive(conn).decode()
+            match client_input:
+                case "exit":
+                    # tell live sim to quit. the with statement will wait() it
+                    print("exit", file=live_sim.stdin, flush=True)
+                    break
+                case "": # Received empty: paused
                     continue
+                case _: # Otherwise input must be dataclass string
+                    try: # If conversion fails, print error rather than crashing
+                        input_string = str(deserialize_dict(client_input))
+                    except ValueError as e:
+                        send_message(f"Failure with input {client_input}: {e}", conn)
+                        continue
 
-        in_pipe.write(input_string + "\n")
-        in_pipe.flush()
+            # send new input to process, triggering a step forward and output
+            print(input_string, file=live_sim.stdin, flush=True)
 
-        verilog_prints: list[str] = []
-        system_update_string: str = ""
+            verilog_prints: list[str] = []
+            system_update_string: str = ""
 
-        while True:
-            # receive strings until we get a system string
-            # we know system string is last because model eval is what triggers
-            # display prints and is called before sending state
-            output_string = out_pipe.readline().strip()
-            if output_string.startswith("secretkey"):
-                system_update_string = output_string[len("secretkey"):]
-                break
-            else:
-                if not i_am_a_docker:
-                    m = textwrap.indent(output_string, " " * 4)
-                    if colorama_available:
-                        print(f"{Fore.BLUE}{Style.BRIGHT}{m}{Style.RESET_ALL}")
-                    else:
+            while True:
+                # receive 0+ Verilog $display prints, then labeled state string
+                output_string = live_sim.stdout.readline()
+                if output_string.startswith("secretkey"):
+                    system_update_string = output_string[len("secretkey"):]
+                    break
+                else:
+                    if not i_am_a_docker:
+                        m = textwrap.indent(output_string, " " * 4)
                         print(m)
-                verilog_prints.append(output_string)
+                    verilog_prints.append(output_string)
 
-        send_message(repr(verilog_prints), sock)
-        send_message(system_update_string, sock)
-    # TODO: properly close process. Writing "exit\n" and calling process.wait() hangs forever...
+            send_message(repr(verilog_prints), sock)
+            send_message(system_update_string, sock)
+
+    # finally tell client we exited. The with-statement ends with a wait() call.
+    send_message("exit", conn)
 
 def verify_ports(candidate_input: dict[str, int], candidate_output: dict[str, int], canonical_input: dict[str, int], canonical_output: dict[str, int]):
     i_extra_ports: dict[str, int] = {}
@@ -136,7 +123,8 @@ def verify_ports(candidate_input: dict[str, int], candidate_output: dict[str, in
         return ErrorMessage(repr(dicts))
     else:
         return AckMessage()
-def try_waveform_run(name: str, files: list[NamedFile]):
+
+def try_waveform_run(file_type: str, files: list[NamedFile]):
     names = [file.name for file in files]
     try:
         names.remove("tb.v")
@@ -147,47 +135,49 @@ def try_waveform_run(name: str, files: list[NamedFile]):
     # get the tb file to manipulate it (we know it is there)
     tb_file = first_matching(files, lambda x: x.name == "tb.v")
 
+    filename = f"temp.{file_type}"
+    output_path = Path(filename)
+    # Delete the output file in case a previous run put one there
+    output_path.unlink(missing_ok=True)
+
     if tb_file.content.find("$DUMP_FILENAME") == -1:
         return None, ErrorMessage("SRVRSEZ:Testbench did not include wildcard "
         "$DUMP_FILENAME; should have lines $dumpfile(\"$DUMP_FILENAME\"); "
         "and $dumpvars(0, tb);")
     else:
-        tb_file.content = Template(tb_file.content).safe_substitute(DUMP_FILENAME=name)
+        tb_file.content = Template(tb_file.content).safe_substitute(DUMP_FILENAME=filename)
 
-    # Delete the output file in case a previous run put one there
-    Path(name).unlink(missing_ok=True)
 
     for file in files:
         file.to_disk(Path("./user_inputs"))
 
     filenames_str = " ".join(names)
     envvars = environ.copy() | {"COMPILE_FILES": filenames_str, "CXXFLAGS": "-fdiagnostics-color"}
-    proc = subprocess.run(["/bin/bash", "./Waveform_Run.sh"], stderr=subprocess.PIPE, env=envvars)
+
+    proc = subprocess.run(["/bin/bash", "./run_waveform.sh", file_type], stderr=subprocess.PIPE, env=envvars)
 
     match proc.returncode:
         case 0:
             try:
-                output_file = NamedFile.from_fp(open(name, "r"), close_after=True)
+                output_file = output_path.read_bytes()
             except FileNotFoundError:
                 return None, ErrorMessage("SRVRSEZ:Testbench ran successfully but did not "
-                f"output to file {name}; should have lines $dumpfile(\"$DUMP_FILENAME\"); and $dumpvars(0, tb);")
+                f"output to file; should have lines $dumpfile(\"$DUMP_FILENAME\"); and $dumpvars(0, tb);")
             return output_file, AckMessage()
         case _:
             return None, ErrorMessage(f"\n\n{proc.stderr.decode()}")
 
-def waveform_sim(sock: socket.socket, name: str, files: list[NamedFile]):
-    print(f"Name: {name}")
-    output_file, result = try_waveform_run(name, files)
+def waveform_sim(sock: socket.socket, file_type: str, files: list[NamedFile]):
+    waveform_bytes, result = try_waveform_run(file_type, files)
 
     sock.send(result.CODE.encode())
     send_message(serialize_dataclass(result), sock)
 
-    match output_file, result:
-        case None, ErrorMessage():
+    match result:
+        case ErrorMessage():
             pass # Already sent error message, nothing more to do
-        case NamedFile(), AckMessage():
-            send_message(serialize_dataclass(output_file), sock) # pyright: ignore[reportArgumentType]
-
+        case AckMessage():
+            send_message(waveform_bytes, sock) # pyright: ignore[reportArgumentType]
 
 def build_live(sock: socket.socket, files: list[NamedFile], expected_inputs: dict[str, int], expected_outputs: dict[str, int]):
     # Tries to make Verilog header. If it works, checks ports.
@@ -313,5 +303,5 @@ if __name__ == "__main__":
                     build_live(conn, files, expected_inputs, expected_outputs)
                 case StartLiveCommand():
                     live_sim(conn)
-                case WaveformSimCommand(name, files):
-                    waveform_sim(conn, name, files)
+                case WaveformSimCommand(file_type, files):
+                    waveform_sim(conn, file_type, files)

@@ -5,10 +5,8 @@ students new to programming. It provides a friendly command-line interface, both
 to run Verilog testbenches and to run synthesizable code interactively on a
 "virtual FPGA board" (referred to as "live simulations").
 
-Primary development is on Mac, with significant testing on Windows and Ubuntu.
-The software has [low performance requirements](os-hardware) and I believe it
-will run well on almost any computer from the past few years with a recent
-operating system.
+This app has [low hardware requirements](#os-hardware), and full support for
+Mac, Windows, and Ubuntu Linux.
 
 This software was first used in spring 2026 for ECE 2029
 (*Introduction to Digital Circuit Design*) at Worcester Polytechnic Institute
@@ -96,8 +94,8 @@ highlighter
     * This program supports automaticaly opening with VSCode's
     [VaporView](https://marketplace.visualstudio.com/items?itemName=lramseyer.vaporview)
     extension, [GTKWave](https://gtkwave.github.io/gtkwave/index.html),
-    or [Surfer](https://gitlab.com/surfer-project/surfer), but any program that
-    can open .vcd files can be used manually
+    or [Surfer](https://gitlab.com/surfer-project/surfer)
+    * Any program that can open FST or VCD files can be used manually
 
 ## Installation walkthrough
 
@@ -155,7 +153,7 @@ Just like Docker Desktop, open it when the download finishes, and an
 installation process will start.
     * After VSCode is installed, install these two extensions:
         * [Verilog language support](https://marketplace.visualstudio.com/items?itemName=eirikpre.systemverilog)
-        * [VaporView](https://marketplace.visualstudio.com/items?itemName=lramseyer.vaporview) VCD viewer
+        * [VaporView](https://marketplace.visualstudio.com/items?itemName=lramseyer.vaporview) waveform viewer
 
 **If you are not using VSCode**:
 Install [GTKWave](https://gtkwave.github.io/gtkwave/index.html) or
@@ -164,8 +162,6 @@ found by the terminal from your system path. GTKWave is not recommended on
 Windows unless you are experienced with compiling software.
 [Surfer can also be used in the browser](https://app.surfer-project.org/)
 (without an auto-opening feature, and maybe with bad performance).
-If you use another VCD viewer and like it, please contact me and I may add it
-as an officially supported viewer to automatically open waveforms.
 
 4. Install uv:
 * Windows: use [uv's standalone Windows installer](https://docs.astral.sh/uv/getting-started/installation/#__tabbed_1_2)
@@ -247,13 +243,13 @@ the simulator program. They will visibly fail if it is not.
     * x86:
 
         ```
-        docker pull --platform linux/amd64 ghcr.io/theharmonicrealm/fpga-sim-server:v2
+        docker pull --platform linux/amd64 ghcr.io/theharmonicrealm/fpga-sim-server:v3
         ```
 
     * ARM:
 
         ```
-        docker pull --platform linux/arm64 ghcr.io/theharmonicrealm/fpga-sim-server:v2
+        docker pull --platform linux/arm64 ghcr.io/theharmonicrealm/fpga-sim-server:v3
         ```
 
 8. From the `fpga-sim` directory
@@ -274,6 +270,15 @@ unusual startup delay.
 > [!Note]
 > You cannot run the script with a different command. uv ensures you are on the correct Python
 version and have the necessary packages available.
+
+* On first run it will have you enter an option to select the waveform
+viewer of your choice for the auto-open feature. If you do not require that
+feature, you can choose "none". If your selection cannot be found by the
+program, it will require you to close it and either fix this or change your
+setting to "none" before reopening.
+    * You MUST open a new terminal tab in order for the software to find new
+    programs added to your system path. If running in the original tab, it will
+    be stuck on the previous path.
 
 ## Program usage
 
@@ -312,25 +317,30 @@ having an ending command, will crash the simulator.
 All filenames must match their module names (i.e. `lights` ↔︎ `lights.v`, etc).
 This rule goes for live simulation, too.
 
-Run the testbench with `waveform_sim <input_directory> <output_filename.vcd> [-overwrite]`.
-This may take a few minutes in extreme cases.
+> [!Note]
+> **FST or VCD?**
+> 
+> This program originally supported only VCD files for waveforms. These are
+long-standardized, but they are a limited and inefficient format.
+With v3, I added support for **FST files, which are now recommended.**
+This is a newer format developed for GTKWave and supported by VaporView and
+Surfer. FST is more efficient and adds some nice features; for example, it
+exports the names of SystemVerilog enums to display them in a viewer rather than
+showing them as bare constants. 
 
-> [!Note]  
-> On Windows, when a waveform sim is run and the output opens automatically in
-> VSCode, if it shows an error like "this file has an error and can't be opened",
-> delete the file in the `python` folder called `waveform_viewer_choice.txt`.
-> Close the program, run it again, and enter "None" when prompted to choose a waveform viewer.
+Run the testbench with `waveform_sim <input_directory> <output_filename> [-overwrite]`,
+with the filename having .fst or .vcd as its extension.
+This may take a few minutes in extreme cases.
 
 If `-overwrite`, or any shortening of it (`-o` or longer), is provided as the
 third argument, the output file will be overwritten if it already exists.
 Otherwise, an error is printed if it already exists, to avoid accidents.
 The first time you run this, it will have you choose which waveform viewer, if
 any, to automatically open waveforms in. You can later change your setting
-by deleting the file `python/waveform_viewer_choice.txt` and running the
-program again.
+by editing the file `settings.toml`.
 
-* **Example call:** `waveform_sim ex_tb wave.vcd`
-* **Example call (allowing overwrite):** `waveform_sim ex_tb wave.vcd -ov`
+* **Example call (no overwrite):** `waveform_sim ex_tb wave.fst`
+* **Example call (allowing overwrite):** `waveform_sim ex_tb wave.fst -ov`
 
 > [!Note]  
 > Unlike live simulation, testbench/waveform simulation does not have separate build and run steps.
@@ -449,14 +459,20 @@ prefaced with `board__`) stored in the `python` folder. Base this on one
 of the provided boards.
 * New entries in the `board_data_user.toml` file (you must create that file) to
 point to the file and list the widths of the new board's input and output ports.
-    * Base these on `board_data.toml` but place them here to not have
-    merge conflicts when updating via `git pull`.
+    * These have the same format as `board_data.toml`. The point of a second
+    file is to not have merge conflicts when updating via `git pull`.
 
 > [!Caution]
-> `board__base.py` and its dependencies (`gui__widgets.py` etc.) are currently 
-> liable to change dramatically. I will stabilize them more eventually.
-> For now, if you are distributing custom boards, please consider copying the
-> files they import under another name for maximum reliability.
+> `board__base.py` and its dependencies (`gui__widgets.py` etc.) may be changed
+> dramatically without any notice or warning. If you are distributing custom
+> boards, please consider copying and redistributing the files they import under
+> another name for maximum reliability.
+>
+> If you intend to use this software and add custom boards for a course and
+> would like a promise of stability, please feel free to contact me/raise an
+> issue on GitHub. I have cleaned them up to a large extent, so I don't think
+> they will change dramatically in an incompatible way, but I don't want to
+> make a promise before I have someone who says they would benefit from it.
 
 ## Updating the software
 
@@ -492,21 +508,40 @@ Windows support for Verilator appears to be more rough; if you attempt to
 install Verilator and natively run the server on any platform, please let me
 know about your experience, successful or not!
 
+Verilator in the Docker container is pinned to **v5.046**. Use later versions
+at your own risk of incompatibility.
+
+Because this program supports outputting FST files, zlib1g and zlib1g-dev are
+hard requirements, at least on Ubuntu; Verilator's install instructions have
+you get them in a line that includes some optional packages which can fail to
+install, so you may miss them. Please install them separately
+(e.g. `sudo apt get zlib1g zlib1g-dev` on Ubuntu). They aren't needed until
+you are running the program, so you do not need to reinstall/rebuild Verilator
+after downloading them.
+
 Using this mode:
 1. From the top fpga-sim folder, set up the server with:
 
     <!-- TODO: maintain this script!!! perhaps could scrape the copying list from
     the Dockerfile somehow -->
     ```
-    uv run python/setup_host_server.py <path>
+    uv run setup_host_server.py [path] [-ov]
     ```
 
     With no arguments, this will place the server in `fpga-sim/host_server`, or
-    it otherwise will place it in `<path>/host_server`.
+    it otherwise will place it directly at `<path>`.
     A rule enforced by my setup script, which cannot be circumvented, is that
     **the path must contain no spaces**, because GNU make is used by the server.
     This script will also fail with a warning if Verilator has not yet been
     installed.
+
+    To update the native server, pass -ov as the last argument and the folder
+    will be overwritten.
+    
+    Unlike the Docker image, there is no verification of
+    server-client versions matching, but the script copies over the tag
+    file used to build images — you can manually check that the client and
+    server both have the same string (e.g. v3) listed in `docker_tag.txt`.
 
 2. Open the server's folder in a new terminal. The only dependencies for the
     server are included with Python, so uv is unnecessary here. Just run it
@@ -532,26 +567,19 @@ Using this mode:
 ### Future plans
 
 Here are some things I intend to add in the future:
-* Support for Podman, an alternative container system which has some benefits
-(CLI-only option for Mac/Windows users, possibly better performance)
-    * If I can make native mode easier to use, and can confirm it works well on
-    Windows, I might make it the primary way to use the program and skip
-    containers entirely.
-* More virtual boards.
-* Changes to the virtual board system to require less effort on the part of
-people making new ones.
-    * A "DSL" (probably just Python-based) to assemble Qt layouts for a virtual
-    board using the existing widgets would be really cool.
 * Support for display statements in testbenches.
-* Better networking code so it's easier to send things back and forth.
-Currently the coordination between the server and client is pretty annoying to
-write. I imagine there is a library out there that could let me write
-`client__shell.py` and `server__manager.py` in a more pleasant way.
+* Support for Podman, an alternative container system which has some benefits
+(CLI-only option for Mac/Windows users, possibly better performance).
+    * Alternatively, I may investigate running Verilator on Windows and cutting
+    containers out completely.
+* A small DSL, or maybe use of an existing language, to make virtual
+board definitions even simpler. I think the current system is already good, but
+I would like to have a a more declarative way for students to put the existing
+widgets together for their own projects.
 * Installation to a central location, to separate user programs from the app's
 code.
-    * If done right this would make it more feasible to install on lab computers
-    for multiple users, though if that were to happen there would be new 
-    security considerations I haven't really had in mind.
+    * I want to make it practical to to install this on lab computers
+    for multiple users (though that brings in some security considerations).
 * Support for four-state logic (X and Z) once it is added to Verilator
 ([it is in active development](https://github.com/verilator/verilator/pull/7193)). 
 I don't think it would be worth adding to live sim, but once it
