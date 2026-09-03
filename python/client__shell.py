@@ -114,6 +114,11 @@ def waveform_sim(input_files: list[NamedFile], output_path: Path, folder_name: s
                     # said it doesn't work without shell on Windows
                     # auto-open feature is quite a pain on Windows!
                     subprocess.run(f"code --reuse-window {shlex.quote(str(output_path))}", shell=True)
+                    if sys.platform == 'win32':
+                        print(warning_title(), "This option can be unreliable "
+                              "on Windows. If the auto-opened tab is an empty "
+                              "text editor, close it then ctrl-click the"
+                              "filename in the terminal.")
                 case "gtkwave":
                     print(result_start, f"Opening {Style.BRIGHT}{Fore.CYAN}{clickable_filepath(output_path, 2)}{Style.RESET_ALL} in GTKWave.")
                     # gtkwave launches in background. the startup text is stderr
