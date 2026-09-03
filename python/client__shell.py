@@ -78,6 +78,14 @@ def print_parser_error(parser: ArgumentParser, message: str):
     print(parser.format_usage())
     print(message)
 
+def maybe_pwsh(args: list):
+    '''Puts powershell.exe at the front of a subprocess _CMD list if running
+    on Windows. Workaround to use the VS Code CLI without odd issues.'''
+    if sys.platform == 'win32':
+        return ["powershell.exe"] + args
+    else:
+        return args
+
 def send_command(command: AnyCommand):
     global sock
     str_command = serialize_dataclass(command)
@@ -110,13 +118,7 @@ def waveform_sim(input_files: list[NamedFile], output_path: Path, folder_name: s
             match waveform_viewer:
                 case "code":
                     print(result_start, f"Opening {Style.BRIGHT}{Fore.CYAN}{clickable_filepath(output_path, 2)}{Style.RESET_ALL} in VSCode.")
-                    # removed all shell uses except this one. old comment I had
-                    # said it doesn't work without shell on Windows
-                    # auto-open feature is quite a pain on Windows!
-                    if sys.platform == 'win32':
-                        subprocess.run(["powershell.exe", "code", "--reuse-window", output_path])
-                    else:
-                        subprocess.run([ "code", "--reuse-window", output_path])
+                    subprocess.run(maybe_pwsh(["code", "--reuse-window", output_path]))
                 case "gtkwave":
                     print(result_start, f"Opening {Style.BRIGHT}{Fore.CYAN}{clickable_filepath(output_path, 2)}{Style.RESET_ALL} in GTKWave.")
                     # gtkwave launches in background. the startup text is stderr
@@ -606,10 +608,7 @@ def verify_viewer(viewer: str, proper_name: str):
 
 def check_vscode_extensions():
     # this is run after shutil.which("code") so no need to check again
-    if sys.platform == 'win32':
-        proc = subprocess.run(["powershell.exe", "code", "--list-extensions"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    else:
-        proc = subprocess.run(["code", "--list-extensions"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    proc = subprocess.run(maybe_pwsh(["code", "--list-extensions"]), stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     match proc.returncode:
         case 0:
             output = proc.stdout.decode().strip()
