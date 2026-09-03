@@ -604,7 +604,7 @@ def verify_viewer(viewer: str, proper_name: str):
 
 def check_vscode_extensions():
     # this is run after shutil.which("code") so no need to check again
-    proc = subprocess.run(["code", "--list-extensions"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    proc = subprocess.run("code --list-extensions", stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     match proc.returncode:
         case 0:
             output = proc.stdout.decode().strip()
