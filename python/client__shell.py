@@ -344,7 +344,7 @@ class FileNameCompleter(Completer):
     def get_completions(self, document: Document, complete_event: CompleteEvent):
         word = document.get_word_before_cursor(WORD=True)
         for thing in get_file_names(self.folder):
-            if thing.startswith(word) and thing.endswith(".vcd") and not self.folder.joinpath(thing).is_dir():
+            if thing.startswith(word) and thing.endswith((".vcd", ".fst")) and not self.folder.joinpath(thing).is_dir():
                 yield Completion(thing, start_position=-len(word))
 
 class WaveformSimCompleter(Completer):
@@ -452,8 +452,7 @@ class SettingsFileIssue(Exception):
     pass
 
 def check_waveform_name(filename: str):
-    extension = filename.split(".")[-1]
-    if extension not in ["vcd", "fst"]:
+    if not filename.endswith((".vcd", ".fst")):
         raise ContinueException(f'output argument "{filename}" must end with .fst or .vcd')
     if filename != Path(filename).name:
         # will ultimately save directly to a defined output folder
