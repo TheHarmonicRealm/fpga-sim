@@ -517,6 +517,14 @@ know about your experience, successful or not!
 Verilator in the Docker container is pinned to **v5.046**. Use later versions
 at your own risk of incompatibility.
 
+Because this program supports outputting FST files, zlib1g and zlib1g-dev are
+hard requirements, at least on Ubuntu; Verilator's install instructions have
+you get them in a line that includes some optional packages which can fail to
+install, so you may miss them. Please install them separately
+(e.g. `sudo apt get zlib1g zlib1g-dev` on Ubuntu). They aren't needed until
+you are running the program, so you do not need to reinstall/rebuild Verilator
+after downloading them.
+
 Using this mode:
 1. From the top fpga-sim folder, set up the server with:
 
