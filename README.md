@@ -332,18 +332,18 @@ Run the testbench with `waveform_sim <input_directory> <output_filename> [-overw
 with the filename having .fst or .vcd as its extension.
 This may take a few minutes in extreme cases.
 
-> [!Note]  
-> On Windows, when a waveform sim is run and the output opens automatically in
-> VSCode, if it shows an error like "this file has an error and can't be opened",
-> delete the file in the top folder called `settings.toml`.
-> Close the program, run it again, and enter "None" when prompted to choose a waveform viewer.
+> [!Note]
+> VSCode auto-open is unreliable on many Windows devices for reasons beyond my
+> control, but in the VSCode integrated terminal you can ctrl-click the filename
+> printed after the simulation runs to (in my experience) reliably
+> open the files.
 
 If `-overwrite`, or any shortening of it (`-o` or longer), is provided as the
 third argument, the output file will be overwritten if it already exists.
 Otherwise, an error is printed if it already exists, to avoid accidents.
 The first time you run this, it will have you choose which waveform viewer, if
 any, to automatically open waveforms in. You can later change your setting
-by editng the file `settings.toml`.
+by editing the file `settings.toml`.
 
 * **Example call (no overwrite):** `waveform_sim ex_tb wave.fst`
 * **Example call (allowing overwrite):** `waveform_sim ex_tb wave.fst -ov`
