@@ -243,13 +243,13 @@ the simulator program. They will visibly fail if it is not.
     * x86:
 
         ```
-        docker pull --platform linux/amd64 ghcr.io/theharmonicrealm/fpga-sim-server:v2
+        docker pull --platform linux/amd64 ghcr.io/theharmonicrealm/fpga-sim-server:v3
         ```
 
     * ARM:
 
         ```
-        docker pull --platform linux/arm64 ghcr.io/theharmonicrealm/fpga-sim-server:v2
+        docker pull --platform linux/arm64 ghcr.io/theharmonicrealm/fpga-sim-server:v3
         ```
 
 8. From the `fpga-sim` directory
