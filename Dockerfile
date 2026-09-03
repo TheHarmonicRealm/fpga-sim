@@ -6,18 +6,18 @@
         # If both must be fully built, they run in parallel. On my Mac this took
         # over an hour, vs 18 minutes total when I built the native one, then
         # ran this (which reuses the cache and thus skips the native one)
-    # docker buildx build --platform linux/amd64,linux/arm64 -t ghcr.io/theharmonicrealm/fpga-sim-server:v2 .
+    # docker buildx build --platform linux/amd64,linux/arm64 -t ghcr.io/theharmonicrealm/fpga-sim-server:{tag} .
 
     #### Export images in ARM and x86 format after building
-    # docker image save --output fpga_sim_image_x86.tar ghcr.io/theharmonicrealm/fpga-sim-server:v2 --platform linux/amd64
-    # docker image save --output fpga_sim_image_ARM.tar ghcr.io/theharmonicrealm/fpga-sim-server:v2 --platform linux/arm64
+    # docker image save --output fpga_sim_image_x86.tar ghcr.io/theharmonicrealm/fpga-sim-server:{tag} --platform linux/amd64
+    # docker image save --output fpga_sim_image_ARM.tar ghcr.io/theharmonicrealm/fpga-sim-server:{tag} --platform linux/arm64
     
     #### Load the output of last command onto user machine
     # docker load -i fpga_sim_image_x86.tar
     # docker load -i fpga_sim_image_ARM.tar
 
     #### Normal build for current platform
-    # docker buildx build -t ghcr.io/theharmonicrealm/fpga-sim-server:v2 .
+    # docker buildx build -t ghcr.io/theharmonicrealm/fpga-sim-server:{tag} .
 
     #### Push to GitHub:
     #### Log in (enter PAT on password prompt)
