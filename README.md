@@ -567,26 +567,19 @@ Using this mode:
 ### Future plans
 
 Here are some things I intend to add in the future:
-* Support for Podman, an alternative container system which has some benefits
-(CLI-only option for Mac/Windows users, possibly better performance)
-    * If I can make native mode easier to use, and can confirm it works well on
-    Windows, I might make it the primary way to use the program and skip
-    containers entirely.
-* More virtual boards.
-* Changes to the virtual board system to require less effort on the part of
-people making new ones.
-    * A "DSL" (probably just Python-based) to assemble Qt layouts for a virtual
-    board using the existing widgets would be really cool.
 * Support for display statements in testbenches.
-* Better networking code so it's easier to send things back and forth.
-Currently the coordination between the server and client is pretty annoying to
-write. I imagine there is a library out there that could let me write
-`client__shell.py` and `server__manager.py` in a more pleasant way.
+* Support for Podman, an alternative container system which has some benefits
+(CLI-only option for Mac/Windows users, possibly better performance).
+    * Alternatively, I may investigate running Verilator on Windows and cutting
+    containers out completely.
+* A small DSL, or maybe use of an existing language, to make virtual
+board definitions even simpler. I think the current system is already good, but
+I would like to have a a more declarative way for students to put the existing
+widgets together for their own projects.
 * Installation to a central location, to separate user programs from the app's
 code.
-    * If done right this would make it more feasible to install on lab computers
-    for multiple users, though if that were to happen there would be new 
-    security considerations I haven't really had in mind.
+    * I want to make it practical to to install this on lab computers
+    for multiple users (though that brings in some security considerations).
 
 ---
 †No warranty given by developer, etc.
