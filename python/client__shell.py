@@ -113,12 +113,10 @@ def waveform_sim(input_files: list[NamedFile], output_path: Path, folder_name: s
                     # removed all shell uses except this one. old comment I had
                     # said it doesn't work without shell on Windows
                     # auto-open feature is quite a pain on Windows!
-                    subprocess.run(f"code --reuse-window {shlex.quote(str(output_path))}", shell=True)
                     if sys.platform == 'win32':
-                        print(warning_title(), "This option can be unreliable "
-                              "on Windows. If the auto-opened tab is an empty "
-                              "text editor, close it then ctrl-click the"
-                              "filename in the terminal.")
+                        subprocess.run(["powershell.exe", "code", "--reuse-window", output_path])
+                    else:
+                        subprocess.run([ "code", "--reuse-window", output_path])
                 case "gtkwave":
                     print(result_start, f"Opening {Style.BRIGHT}{Fore.CYAN}{clickable_filepath(output_path, 2)}{Style.RESET_ALL} in GTKWave.")
                     # gtkwave launches in background. the startup text is stderr
@@ -608,7 +606,10 @@ def verify_viewer(viewer: str, proper_name: str):
 
 def check_vscode_extensions():
     # this is run after shutil.which("code") so no need to check again
-    proc = subprocess.run("code --list-extensions", stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+    if sys.platform == 'win32':
+        proc = subprocess.run(["powershell.exe", "code", "--list-extensions"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    else:
+        proc = subprocess.run(["code", "--list-extensions"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     match proc.returncode:
         case 0:
             output = proc.stdout.decode().strip()
