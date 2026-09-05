@@ -25,7 +25,7 @@
     #### Push
     # docker push ghcr.io/theharmonicrealm/fpga-sim-server:{current tag}
 
-FROM ubuntu:22.04@sha256:fed6ddb82c61194e1814e93b59cfcb6759e5aa33c4e41bb3782313c2386ed6df
+FROM ubuntu:26.04@sha256:889d056d5c6c0bfb55789ff3710681d68e50713cb562d2196dc07110599c7a6f
 WORKDIR /usr/bin/
 
 # apt-get must always be run this way in Dockerfiles:
