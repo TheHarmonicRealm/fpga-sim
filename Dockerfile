@@ -1,12 +1,9 @@
 # syntax=docker/dockerfile:1
 
 # Run from the fpga-sim directory:
-    #### Build for x86 and ARM:
-        # PRO TIP: run normal build command (last one listed) first
-        # If both must be fully built, they run in parallel. On my Mac this took
-        # over an hour, vs 18 minutes total when I built the native one, then
-        # ran this (which reuses the cache and thus skips the native one)
-    # docker buildx build --platform linux/amd64,linux/arm64 -t ghcr.io/theharmonicrealm/fpga-sim-server:{tag} .
+    #### Build for x86 and ARM. Env var at front makes them not run in parallel,
+        # which really speeds things up at least on a laptop.
+    # COMPOSE_PARALLEL_LIMIT=1 docker buildx build --platform linux/amd64,linux/arm64 -t ghcr.io/theharmonicrealm/fpga-sim-server:{tag} .
 
     #### Export images in ARM and x86 format after building
     # docker image save --output fpga_sim_image_x86.tar ghcr.io/theharmonicrealm/fpga-sim-server:{tag} --platform linux/amd64
@@ -25,7 +22,7 @@
     #### Push
     # docker push ghcr.io/theharmonicrealm/fpga-sim-server:{current tag}
 
-FROM ubuntu:22.04@sha256:fed6ddb82c61194e1814e93b59cfcb6759e5aa33c4e41bb3782313c2386ed6df
+FROM ubuntu:26.04@sha256:2260313b31c8c011cd2eebe728008efac1b3982be73eb71348ea2648d2c0e09b
 WORKDIR /usr/bin/
 
 # apt-get must always be run this way in Dockerfiles:

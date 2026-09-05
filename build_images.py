@@ -1,5 +1,6 @@
 import subprocess
 from html import escape
+from os import environ
 from pathlib import Path
 from sys import argv
 
@@ -13,58 +14,26 @@ def print_success(text: str):
     print_formatted_text(HTML(f"<ansigreen><b>•</b></ansigreen> {escape(text)}"))
 
 def build_native(arch: str, image_name: str):
+    print(f"Building {image_name} for {arch}.")
     try:
         subprocess.check_call(["docker", "buildx", "build", "-t", image_name, "."])
     except subprocess.CalledProcessError:
         print_error(f"Native {arch} build failed (see Docker errors above)!")
         exit(1)
     else:
-        print_success(f"Native {arch} build was successful!")
+        print_success(f"Native {arch} build of {image_name} was successful!")
 
-def build_all(arch: str, image_name: str):
-    '''Builds in series. Takes WAY longer to do in parallel.
-    E.g. on my Mac, ARM is ~9 mins, x86 is ~15, but a full parallel build
-    took >60 mins the one time I did it!'''
-    if arch == "ARM":
-        arch1 = "linux/aarch64"
-        arch2 = "linux/amd64"
-        other_arch = "x86"
-    else:
-        arch1 = "linux/amd64"
-        arch2 = "linux/aarch64"
-        other_arch = "ARM" # for display purposes
-
-    print(f"Building {arch1}")
-
+def build_all(image_name: str):
+    print(f"Building {image_name} for ARM and x86 (forcing sequential builds "
+          "for performance).")
+    envvars = environ.copy() | {"COMPOSE_PARALLEL_LIMIT": "1"}
     try:
-        subprocess.check_call(["docker", "buildx", "build", "--platform", arch1, "-t", image_name, "."])
+        subprocess.check_call(["docker", "buildx", "build", "--platform", "linux/amd64,linux/arm64", "-t", image_name, "."], env=envvars)
     except subprocess.CalledProcessError:
-        print_error(f"Native {arch} build failed (see Docker errors above)!")
+        print_error(f"One or both of the builds failed (see Docker errors above)!")
         exit(1)
     else:
-        print_success(f"Native {arch} build was successful! Continuing on to {other_arch} build.")
-
-    try:
-        subprocess.check_call(["docker", "buildx", "build", "--platform", arch2, "-t", image_name, "."])
-    except subprocess.CalledProcessError:
-        print_error(f"{other_arch} build failed (see Docker errors above)!")
-        exit(1)
-    else:
-        print_success(f"Both builds were successful!")
-
-    # TODO: this is pretty dumb and a hack after I realized the second shadows
-    # the first. Should figure out a docker build config for series builds
-    # and eliminate this.
-    print("Final step: 'rebuilding' both (should be instant due to caching) "
-          "to make both architectures available.")
-
-    try:
-        subprocess.check_call(["docker", "buildx", "build", "--platform", "linux/amd64,linux/arm64", "-t", image_name, "."])
-    except subprocess.CalledProcessError:
-        print_error(f"Final step failed (see Docker errors above)!")
-        exit(1)
-    else:
-        print_success("All done!")
+        print_success(f"Both builds of {image_name} were successful!")
 
 
 native_architecture = subprocess.run(["docker", "info", "--format", "'{{ .Architecture }}'"], stdout=subprocess.PIPE, check=True).stdout.decode()
@@ -85,7 +54,7 @@ try:
         case [_]:
             build_native(native_architecture, image_name)
         case [_, "all"]:
-            build_all(native_architecture, image_name)
+            build_all(image_name)
         case _:
             print_error("Invalid argument. Either takes no arguments to build for "
                 f"this computer's architecture ({native_architecture}), "
