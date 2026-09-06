@@ -428,6 +428,7 @@ def get_latest_container_port(tag: str):
 def colorize(err: str, folder: str | None = None):
     err = err.lstrip()
     if folder is not None:
+        # TODO: don't convert filenames for 'looked in' errors?
         err = re.sub(r"user_inputs/", folder + "/", err)
     # cut off "Error: Exiting due to 1 error(s)"-type lines, we know the idea!
     err = re.sub(r"^.*Error: Exiting due to.*$", "", err, flags=re.MULTILINE)

@@ -151,21 +151,27 @@ def try_waveform_run(file_type: str, files: list[NamedFile]):
     for file in files:
         file.to_disk(Path("./user_inputs"))
 
-    filenames_str = " ".join(names)
-    envvars = environ.copy() | {"COMPILE_FILES": filenames_str, "CXXFLAGS": "-fdiagnostics-color"}
+    try:
+        subprocess.run(["verilator", "--lint-only", "--timing", "-Werror-NULLPORT", "-I./user_inputs", *names], stderr=subprocess.PIPE, check=True)
+    except subprocess.CalledProcessError as e:
+        return None, ErrorMessage(f"Lint:\n\n{e.stderr.decode()}")
 
-    proc = subprocess.run(["/bin/bash", "./run_waveform.sh", file_type], stderr=subprocess.PIPE, env=envvars)
+    try:
+        subprocess.run(["verilator", "--binary", "--timing", f"--trace-{file_type}", "-I./user_inputs", *names], stderr=subprocess.PIPE, check=True)
+    except subprocess.CalledProcessError as e:
+        return None, ErrorMessage(f"Build:\n\n{e.stderr.decode()}")
 
-    match proc.returncode:
-        case 0:
-            try:
-                output_file = output_path.read_bytes()
-            except FileNotFoundError:
-                return None, ErrorMessage("SRVRSEZ:Testbench ran successfully but did not "
-                f"output to file; should have lines $dumpfile(\"$DUMP_FILENAME\"); and $dumpvars(0, tb);")
-            return output_file, AckMessage()
-        case _:
-            return None, ErrorMessage(f"\n\n{proc.stderr.decode()}")
+    try:
+        subprocess.run(["./obj_dir/Vtb"], stderr=subprocess.PIPE, check=True)
+    except subprocess.CalledProcessError as e:
+        return None, ErrorMessage(f"Run:\n\n{e.stderr.decode()}")
+
+    try:
+        output_file = output_path.read_bytes()
+    except FileNotFoundError:
+        return None, ErrorMessage("SRVRSEZ:Testbench ran successfully but did not "
+        "output to file; should have lines $dumpfile(\"$DUMP_FILENAME\"); and $dumpvars(0, tb);")
+    return output_file, AckMessage()
 
 def waveform_sim(sock: socket.socket, file_type: str, files: list[NamedFile]):
     waveform_bytes, result = try_waveform_run(file_type, files)
@@ -188,7 +194,7 @@ def build_live(sock: socket.socket, files: list[NamedFile], expected_inputs: dic
     try:
         names.remove("top.v")
     except ValueError:
-        return ErrorMessage(f"Lacking a top.v. Client should have caught this.")
+        return ErrorMessage("Lacking a top.v. Client should have caught this.")
     names.insert(0, "top.v") # put at front to indicate top to Verilator
 
     for file in files:

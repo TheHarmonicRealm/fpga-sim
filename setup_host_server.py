@@ -68,7 +68,6 @@ to_copy = [
     top_folder.joinpath("server_materials/simulator_driver_template.cpp"),
     top_folder.joinpath("server_materials/string_dict_tools.cpp"),
     top_folder.joinpath("server_materials/string_dict_tools.h"),
-    top_folder.joinpath("server_materials/run_waveform.sh"),
     top_folder.joinpath("docker_tag.txt")
     ]
 
