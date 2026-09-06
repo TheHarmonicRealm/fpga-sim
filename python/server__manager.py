@@ -200,23 +200,22 @@ def build_live(sock: socket.socket, files: list[NamedFile], expected_inputs: dic
     for file in files:
         file.to_disk(Path("./user_inputs"))
 
-    # List is passed in as an environment variable
-    # Server passes -I./user_inputs so it can find these files by name
-    filenames_str = " ".join(names)
-    envvars = environ.copy() | {"COMPILE_FILES": filenames_str, "CXXFLAGS": "-fdiagnostics-color"}
+    # list of files is passed in as a Make variable e.g. "top.v alarm.v"
+    # makefile target also passes -I./user_inputs to Verilator
 
-    proc = subprocess.run(["make", "generate_code"], stderr=subprocess.PIPE, env=envvars)
+    modules_arg = f"MODULES={" ".join(names)}"
 
-    match proc.returncode:
-        case 0:
-            # continue to generating exe
-            sock.send(AckMessage().CODE.encode())
-            send_message(serialize_dataclass(AckMessage()), sock)
-        case _:
-            e = ErrorMessage(f"\n\n{proc.stderr.decode()}")
-            sock.send(e.CODE.encode())
-            send_message(serialize_dataclass(e), sock)
-            return False
+    try:
+        subprocess.run(["make", "generate_code", modules_arg], stderr=subprocess.PIPE, check=True)
+    except subprocess.CalledProcessError as e:
+        e = ErrorMessage(f"\n\n{e.stderr.decode()}")
+        sock.send(e.CODE.encode())
+        send_message(serialize_dataclass(e), sock)
+        return False
+
+    # continue to generating exe
+    sock.send(AckMessage().CODE.encode())
+    send_message(serialize_dataclass(AckMessage()), sock)
         
     input_ports, output_ports = extract_ports.ports_dicts(Path("./obj_dir/Vtop.h"))
 
@@ -234,18 +233,17 @@ def build_live(sock: socket.socket, files: list[NamedFile], expected_inputs: dic
         
     extract_ports.write_driver(Path("./simulator_driver_template.cpp"), Path("./simulator_driver_generated.cpp"), input_ports, output_ports)
 
-    proc = subprocess.run(["make", "finish_build"], stderr=subprocess.PIPE, env=envvars)
+    try:
+        subprocess.run(["make", "finish_build", modules_arg], stderr=subprocess.PIPE, check=True)
+    except subprocess.CalledProcessError as e:
+        e = ErrorMessage(f"\n\n{e.stderr.decode()}")
+        sock.send(e.CODE.encode())
+        send_message(serialize_dataclass(e), sock)
+        return False
 
-    match proc.returncode:
-        case 0:
-            sock.send(AckMessage().CODE.encode())
-            send_message(serialize_dataclass(AckMessage()), sock)
-            return True
-        case _:
-            e = ErrorMessage(f"\n\n{proc.stderr.decode()}")
-            sock.send(e.CODE.encode())
-            send_message(serialize_dataclass(e), sock)
-            return False
+    sock.send(AckMessage().CODE.encode())
+    send_message(serialize_dataclass(AckMessage()), sock)
+    return True
 
 if __name__ == "__main__":
     i_am_a_docker = "FPGA_DOCKER_SERVER" in environ

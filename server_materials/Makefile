@@ -50,11 +50,9 @@ VERILATOR_FLAGS += -CFLAGS -std=c++17
 
 
 # Input files for Verilator
-VERILATOR_INPUT = $(COMPILE_FILES)
+VERILATOR_INPUT = $(MODULES) string_dict_tools.cpp port_ref.cpp simulator_driver_generated.cpp
 
 verilate_line := $(VERILATOR) $(VERILATOR_FLAGS) $(VERILATOR_INPUT)
-
-VERILATOR_INPUT += string_dict_tools.cpp port_ref.cpp simulator_driver_generated.cpp
 
 # Generate C++ in executable form
 VERILATOR_FLAGS += --exe
