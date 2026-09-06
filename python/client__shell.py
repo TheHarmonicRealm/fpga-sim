@@ -110,7 +110,7 @@ def waveform_sim(input_files: list[NamedFile], output_path: Path, folder_name: s
                 print(colorize(content, f"verilog/testbench/{folder_name}"))
         case AckMessage():
 
-            result_start = f"{success_title()} Ran testbench simulation in {round((t2 - t1), 3)}s."
+            result_start = f"{success_title()} Built and ran testbench in {round((t2 - t1), 3)}s."
 
             waveform_data = big_receive(sock)
             output_path.write_bytes(waveform_data)
