@@ -151,21 +151,27 @@ def try_waveform_run(file_type: str, files: list[NamedFile]):
     for file in files:
         file.to_disk(Path("./user_inputs"))
 
-    filenames_str = " ".join(names)
-    envvars = environ.copy() | {"COMPILE_FILES": filenames_str, "CXXFLAGS": "-fdiagnostics-color"}
+    try:
+        subprocess.run(["verilator", "--lint-only", "--timing", "-Werror-NULLPORT", "-I./user_inputs", *names], stderr=subprocess.PIPE, check=True)
+    except subprocess.CalledProcessError as e:
+        return None, ErrorMessage(f"Lint:\n\n{e.stderr.decode()}")
 
-    proc = subprocess.run(["/bin/bash", "./run_waveform.sh", file_type], stderr=subprocess.PIPE, env=envvars)
+    try:
+        subprocess.run(["verilator", "--binary", "--timing", f"--trace-{file_type}", "-I./user_inputs", *names], stderr=subprocess.PIPE, check=True)
+    except subprocess.CalledProcessError as e:
+        return None, ErrorMessage(f"Build:\n\n{e.stderr.decode()}")
 
-    match proc.returncode:
-        case 0:
-            try:
-                output_file = output_path.read_bytes()
-            except FileNotFoundError:
-                return None, ErrorMessage("SRVRSEZ:Testbench ran successfully but did not "
-                f"output to file; should have lines $dumpfile(\"$DUMP_FILENAME\"); and $dumpvars(0, tb);")
-            return output_file, AckMessage()
-        case _:
-            return None, ErrorMessage(f"\n\n{proc.stderr.decode()}")
+    try:
+        subprocess.run(["./obj_dir/Vtb"], stderr=subprocess.PIPE, check=True)
+    except subprocess.CalledProcessError as e:
+        return None, ErrorMessage(f"Run:\n\n{e.stderr.decode()}")
+
+    try:
+        output_file = output_path.read_bytes()
+    except FileNotFoundError:
+        return None, ErrorMessage("SRVRSEZ:Testbench ran successfully but did not "
+        "output to file; should have lines $dumpfile(\"$DUMP_FILENAME\"); and $dumpvars(0, tb);")
+    return output_file, AckMessage()
 
 def waveform_sim(sock: socket.socket, file_type: str, files: list[NamedFile]):
     waveform_bytes, result = try_waveform_run(file_type, files)
@@ -188,29 +194,28 @@ def build_live(sock: socket.socket, files: list[NamedFile], expected_inputs: dic
     try:
         names.remove("top.v")
     except ValueError:
-        return ErrorMessage(f"Lacking a top.v. Client should have caught this.")
+        return ErrorMessage("Lacking a top.v. Client should have caught this.")
     names.insert(0, "top.v") # put at front to indicate top to Verilator
 
     for file in files:
         file.to_disk(Path("./user_inputs"))
 
-    # List is passed in as an environment variable
-    # Server passes -I./user_inputs so it can find these files by name
-    filenames_str = " ".join(names)
-    envvars = environ.copy() | {"COMPILE_FILES": filenames_str, "CXXFLAGS": "-fdiagnostics-color"}
+    # list of files is passed in as a Make variable e.g. "top.v alarm.v"
+    # makefile target also passes -I./user_inputs to Verilator
 
-    proc = subprocess.run(["make", "generate_code"], stderr=subprocess.PIPE, env=envvars)
+    modules_arg = f"MODULES={" ".join(names)}"
 
-    match proc.returncode:
-        case 0:
-            # continue to generating exe
-            sock.send(AckMessage().CODE.encode())
-            send_message(serialize_dataclass(AckMessage()), sock)
-        case _:
-            e = ErrorMessage(f"\n\n{proc.stderr.decode()}")
-            sock.send(e.CODE.encode())
-            send_message(serialize_dataclass(e), sock)
-            return False
+    try:
+        subprocess.run(["make", "generate_code", modules_arg], stderr=subprocess.PIPE, check=True)
+    except subprocess.CalledProcessError as e:
+        e = ErrorMessage(f"\n\n{e.stderr.decode()}")
+        sock.send(e.CODE.encode())
+        send_message(serialize_dataclass(e), sock)
+        return False
+
+    # continue to generating exe
+    sock.send(AckMessage().CODE.encode())
+    send_message(serialize_dataclass(AckMessage()), sock)
         
     input_ports, output_ports = extract_ports.ports_dicts(Path("./obj_dir/Vtop.h"))
 
@@ -228,18 +233,17 @@ def build_live(sock: socket.socket, files: list[NamedFile], expected_inputs: dic
         
     extract_ports.write_driver(Path("./simulator_driver_template.cpp"), Path("./simulator_driver_generated.cpp"), input_ports, output_ports)
 
-    proc = subprocess.run(["make", "finish_build"], stderr=subprocess.PIPE, env=envvars)
+    try:
+        subprocess.run(["make", "finish_build", modules_arg], stderr=subprocess.PIPE, check=True)
+    except subprocess.CalledProcessError as e:
+        e = ErrorMessage(f"\n\n{e.stderr.decode()}")
+        sock.send(e.CODE.encode())
+        send_message(serialize_dataclass(e), sock)
+        return False
 
-    match proc.returncode:
-        case 0:
-            sock.send(AckMessage().CODE.encode())
-            send_message(serialize_dataclass(AckMessage()), sock)
-            return True
-        case _:
-            e = ErrorMessage(f"\n\n{proc.stderr.decode()}")
-            sock.send(e.CODE.encode())
-            send_message(serialize_dataclass(e), sock)
-            return False
+    sock.send(AckMessage().CODE.encode())
+    send_message(serialize_dataclass(AckMessage()), sock)
+    return True
 
 if __name__ == "__main__":
     i_am_a_docker = "FPGA_DOCKER_SERVER" in environ
