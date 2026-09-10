@@ -91,7 +91,7 @@ them. If you want, you can install the required software yourself then skip to
 highlighter
     * [Recommended VSCode Verilog syntax highlighter](https://marketplace.visualstudio.com/items?itemName=eirikpre.systemverilog)
 * A waveform viewer
-    * This program supports automaticaly opening with VSCode's
+    * This program supports automatically opening with VSCode's
     [VaporView](https://marketplace.visualstudio.com/items?itemName=lramseyer.vaporview)
     extension, [GTKWave](https://gtkwave.github.io/gtkwave/index.html),
     or [Surfer](https://gitlab.com/surfer-project/surfer)
@@ -176,7 +176,7 @@ Windows unless you are experienced with compiling software.
             and when that's done open a new terminal tab and try the ensurepip
             command again.
         * Once you have pip, install uv using `py -m pip install uv`.
-            * If installed in this manner, uv is invoked eith `py -m uv`
+            * If installed in this manner, uv is invoked with `py -m uv`
             in place of `uv` (so `py -m uv run ...` etc)
 * Mac/Linux: use [uv's standalone Mac/Linux installer](https://docs.astral.sh/uv/getting-started/installation/#__tabbed_1_1)
 (paste the listed command in the terminal to run a script).
@@ -215,7 +215,7 @@ find uv, git, and VSCode.
 > * **If the leftmost item in the path bar is not iCloud Drive**, continue on
 > as normal.
 > 
-> * **If the leftost item in the path bar *is* iCloud Drive**, you need to use
+> * **If the leftmost item in the path bar *is* iCloud Drive**, you need to use
 > a different folder:
 >     * In the terminal, run `cd ~` to go to your user folder.
 >     * Run `mkdir fpga-sim-app` then `cd ./fpga-sim-app` to make and enter a new folder
