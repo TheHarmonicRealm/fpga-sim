@@ -22,7 +22,7 @@ This program provides five "virtual boards," four of which are shown here
 running my own private Verilog example programs; if you are an instructor I can
 send you the Verilog source code to test the app on something less trivial than
 the public programs.
-[You can also make additional boards](#creating-more-live-simulator-boards)
+[You can also make additional boards](#make-boards)
 tailored to specific student assignments if you have a bit of Python
 experience, and I am working to make it even easier.
 
@@ -450,6 +450,7 @@ for `waveform_sim`/`build_live_sim`. There is also up/down history browsing
 like in a real shell.
 
 #### Creating more live simulator "virtual boards"
+<a id="make-boards" />
 
 Starting with v2, this program can support multiple live simulator boards
 without changes to the Docker image. Currently, this requires some knowledge of
